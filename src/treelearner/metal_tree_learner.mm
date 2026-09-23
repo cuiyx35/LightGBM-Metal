@@ -32,6 +32,7 @@ constexpr uint32_t kRowsPerChunk = 256;
 struct MetalParams {
   uint32_t selected_rows;
   uint32_t features;
+  uint32_t matrix_rows;
   uint32_t rows_per_shard;
   float gradient_scale;
   float hessian_scale;
@@ -44,6 +45,7 @@ using namespace metal;
 struct MetalParams {
   uint selected_rows;
   uint features;
+  uint matrix_rows;
   uint rows_per_shard;
   float gradient_scale;
   float hessian_scale;
@@ -74,7 +76,7 @@ kernel void lightgbm_histogram_grouped(
     const uint selected_index = shard * params.rows_per_shard + chunk * 256 + thread_index;
     if (selected_index < params.selected_rows) {
       const uint row = row_indices[selected_index];
-      const uint bin = feature_bins[row * params.features + feature];
+      const uint bin = feature_bins[feature * params.matrix_rows + row];
       atomic_fetch_add_explicit(&chunk_gradient[bin],
           int(rint(gradients[row] * params.gradient_scale)), memory_order_relaxed);
       atomic_fetch_add_explicit(&chunk_hessian[bin],
@@ -198,14 +200,14 @@ class MetalHistogramEngine {
       }
     }
     auto* matrix = static_cast<uint8_t*>([matrix_ contents]);
-    for (uint32_t row = 0; row < rows_; ++row) {
-      for (uint32_t feature = 0; feature < groups_; ++feature) {
+    for (uint32_t feature = 0; feature < groups_; ++feature) {
+      for (uint32_t row = 0; row < rows_; ++row) {
         const uint32_t bin = iterators[feature]->RawGet(row);
         if (bin >= kBins || bin >= static_cast<uint32_t>(dataset->FeatureGroupNumBin(groups[feature]))) {
           Log::Warning("Metal bin is outside its feature group; using CPU");
           return false;
         }
-        matrix[uint64_t(row) * groups_ + feature] = static_cast<uint8_t>(bin);
+        matrix[uint64_t(feature) * rows_ + row] = static_cast<uint8_t>(bin);
       }
     }
     active_ = true;
@@ -262,7 +264,7 @@ class MetalHistogramEngine {
       }
     }
     std::memcpy([mask_ contents], group_mask.data(), groups_);
-    const MetalParams params{static_cast<uint32_t>(selected_rows), groups_, kRowsPerShard,
+    const MetalParams params{static_cast<uint32_t>(selected_rows), groups_, rows_, kRowsPerShard,
                              gradient_scale_, hessian_scale_};
     id<MTLCommandBuffer> command = [queue_ commandBuffer];
     id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
