@@ -7,6 +7,9 @@
 #include <string>
 
 #include "gpu_tree_learner.h"
+#ifdef USE_METAL
+#include "metal_tree_learner.h"
+#endif
 #include "linear_tree_learner.h"
 #include "parallel_tree_learner.h"
 #include "serial_tree_learner.h"
@@ -50,6 +53,15 @@ TreeLearner* TreeLearner::CreateTreeLearner(const std::string& learner_type, con
     } else {
       Log::Fatal("Currently cuda version only supports training on a single machine.");
     }
+  } else if (device_type == std::string("metal")) {
+#ifdef USE_METAL
+    if (learner_type == std::string("serial")) {
+      return new MetalTreeLearner(config);
+    }
+    Log::Fatal("Experimental Metal backend currently supports only the serial tree learner.");
+#else
+    Log::Fatal("Metal backend was not enabled in this build. Rebuild with USE_METAL=ON.");
+#endif
   }
   return nullptr;
 }

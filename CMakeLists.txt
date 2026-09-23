@@ -7,6 +7,7 @@ cmake_minimum_required(VERSION 3.28)
 option(USE_MPI "Enable MPI-based distributed learning" OFF)
 option(USE_OPENMP "Enable OpenMP" ON)
 option(USE_GPU "Enable GPU-accelerated training" OFF)
+option(USE_METAL "Enable experimental Apple Metal histogram training" OFF)
 option(USE_SWIG "Enable SWIG to generate Java API" OFF)
 option(USE_TIMETAG "Set to ON to output time costs" OFF)
 option(USE_CUDA "Enable CUDA-accelerated training " OFF)
@@ -39,6 +40,14 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio")
 endif()
 
 project(lightgbm LANGUAGES C CXX)
+
+if(USE_METAL)
+  if(NOT APPLE)
+    message(FATAL_ERROR "USE_METAL requires macOS")
+  endif()
+  enable_language(OBJCXX)
+  add_compile_definitions(USE_METAL)
+endif()
 
 include(cmake/Utils.cmake)
 
@@ -435,6 +444,10 @@ set(
       src/treelearner/voting_parallel_tree_learner.cpp
       src/utils/openmp_wrapper.cpp
 )
+if(USE_METAL)
+  list(APPEND LGBM_SOURCES src/treelearner/metal_tree_learner.mm)
+  set_source_files_properties(src/treelearner/metal_tree_learner.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
+endif()
 set(
     LGBM_CUDA_SOURCES
       src/boosting/cuda/cuda_score_updater.cpp
@@ -605,6 +618,9 @@ endif()
 
 if(USE_GPU)
   target_link_libraries(lightgbm_objs PUBLIC ${OpenCL_LIBRARY} ${Boost_LIBRARIES})
+endif()
+if(USE_METAL)
+  target_link_libraries(lightgbm_objs PUBLIC "-framework Foundation" "-framework Metal")
 endif()
 
 if(USE_CUDA)

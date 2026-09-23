@@ -243,7 +243,7 @@ struct Config {
   // [no-automatically-extract]
   // [no-save]
   // type = enum
-  // options = cpu, gpu, cuda
+  // options = cpu, gpu, cuda, metal
   // alias = device
   // desc = device for the tree learning
   // desc = ``cpu`` supports all LightGBM functionality and is portable across the widest range of operating systems and hardware

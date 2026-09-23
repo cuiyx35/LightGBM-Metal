@@ -199,6 +199,8 @@ void GetDeviceType(const std::unordered_map<std::string, std::string>& params, s
       *device_type = "gpu";
     } else if (value == std::string("cuda")) {
       *device_type = "cuda";
+    } else if (value == std::string("metal")) {
+      *device_type = "metal";
     } else {
       Log::Fatal("Unknown device type %s", value.c_str());
     }
@@ -403,7 +405,7 @@ void Config::CheckParamConflict(const std::unordered_map<std::string, std::strin
       num_leaves = static_cast<int>(full_num_leaves);
     }
   }
-  if (device_type == std::string("gpu")) {
+  if (device_type == std::string("gpu") || device_type == std::string("metal")) {
     // force col-wise for gpu version
     force_col_wise = true;
     force_row_wise = false;
