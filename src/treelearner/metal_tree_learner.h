@@ -46,6 +46,7 @@ class MetalTreeLearner final : public SerialTreeLearner {
   bool force_cpu_ = false;
   bool compare_hist_ = false;
   bool compared_hist_ = false;
+  data_size_t min_leaf_rows_ = 0;
 };
 
 }  // namespace LightGBM

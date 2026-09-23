@@ -9,6 +9,7 @@
 #include <LightGBM/utils/log.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -25,7 +26,8 @@ namespace LightGBM {
 namespace {
 
 constexpr uint32_t kBins = 256;
-constexpr uint32_t kRowsPerShard = 256;
+constexpr uint32_t kRowsPerShard = 16384;
+constexpr uint32_t kRowsPerChunk = 256;
 
 struct MetalParams {
   uint32_t selected_rows;
@@ -47,27 +49,45 @@ struct MetalParams {
   float hessian_scale;
 };
 
-kernel void lightgbm_histogram_fixed32(
+kernel void lightgbm_histogram_grouped(
     device const uchar* feature_bins [[buffer(0)]],
     device const float* gradients [[buffer(1)]],
     device const float* hessians [[buffer(2)]],
     device const uint* row_indices [[buffer(3)]],
     device const uchar* feature_mask [[buffer(4)]],
-    device atomic_int* gradient_hist [[buffer(5)]],
-    device atomic_int* hessian_hist [[buffer(6)]],
+    device long* gradient_hist [[buffer(5)]],
+    device long* hessian_hist [[buffer(6)]],
     constant MetalParams& params [[buffer(7)]],
-    uint index [[thread_position_in_grid]]) {
-  const uint total = params.selected_rows * params.features;
-  if (index >= total) return;
-  const uint selected_index = index / params.features;
-  const uint feature = index - selected_index * params.features;
+    uint3 group_position [[threadgroup_position_in_grid]],
+    uint thread_index [[thread_index_in_threadgroup]]) {
+  const uint feature = group_position.x;
+  const uint shard = group_position.y;
   if (!feature_mask[feature]) return;
-  const uint row = row_indices[selected_index];
-  const uint bin = feature_bins[row * params.features + feature];
-  const uint shard = selected_index / params.rows_per_shard;
-  const uint offset = (shard * params.features + feature) * 256 + bin;
-  atomic_fetch_add_explicit(&gradient_hist[offset], int(rint(gradients[row] * params.gradient_scale)), memory_order_relaxed);
-  atomic_fetch_add_explicit(&hessian_hist[offset], int(rint(hessians[row] * params.hessian_scale)), memory_order_relaxed);
+  threadgroup atomic_int chunk_gradient[256];
+  threadgroup atomic_int chunk_hessian[256];
+  long gradient_total = 0;
+  long hessian_total = 0;
+  for (uint chunk = 0; chunk < params.rows_per_shard / 256; ++chunk) {
+    atomic_store_explicit(&chunk_gradient[thread_index], 0, memory_order_relaxed);
+    atomic_store_explicit(&chunk_hessian[thread_index], 0, memory_order_relaxed);
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    const uint selected_index = shard * params.rows_per_shard + chunk * 256 + thread_index;
+    if (selected_index < params.selected_rows) {
+      const uint row = row_indices[selected_index];
+      const uint bin = feature_bins[row * params.features + feature];
+      atomic_fetch_add_explicit(&chunk_gradient[bin],
+          int(rint(gradients[row] * params.gradient_scale)), memory_order_relaxed);
+      atomic_fetch_add_explicit(&chunk_hessian[bin],
+          int(rint(hessians[row] * params.hessian_scale)), memory_order_relaxed);
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    gradient_total += atomic_load_explicit(&chunk_gradient[thread_index], memory_order_relaxed);
+    hessian_total += atomic_load_explicit(&chunk_hessian[thread_index], memory_order_relaxed);
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+  }
+  const uint output_index = (shard * params.features + feature) * 256 + thread_index;
+  gradient_hist[output_index] = gradient_total;
+  hessian_hist[output_index] = hessian_total;
 }
 )METAL";
 
@@ -75,11 +95,20 @@ std::string ErrorDescription(NSError* error) {
   return error ? std::string([[error description] UTF8String]) : "unknown Metal error";
 }
 
+using ProfileClock = std::chrono::steady_clock;
+
+double SecondsSince(ProfileClock::time_point start) {
+  return std::chrono::duration<double>(ProfileClock::now() - start).count();
+}
+
 }  // namespace
 
 class MetalHistogramEngine {
  public:
   MetalHistogramEngine() {
+    const char* profile = std::getenv("LGBM_METAL_PROFILE");
+    profile_enabled_ = profile != nullptr && std::strcmp(profile, "1") == 0;
+    const auto setup_start = ProfileClock::now();
     device_ = MTLCreateSystemDefaultDevice();
     if (!device_) {
       Log::Fatal("No Apple Metal device is available");
@@ -90,7 +119,7 @@ class MetalHistogramEngine {
     if (!library) {
       Log::Fatal("Metal shader compilation failed: %s", ErrorDescription(error).c_str());
     }
-    id<MTLFunction> function = [library newFunctionWithName:@"lightgbm_histogram_fixed32"];
+    id<MTLFunction> function = [library newFunctionWithName:@"lightgbm_histogram_grouped"];
     if (!function) {
       Log::Fatal("Metal histogram function is missing");
     }
@@ -102,10 +131,21 @@ class MetalHistogramEngine {
     if (!queue_) {
       Log::Fatal("Metal command queue creation failed");
     }
+    setup_seconds_ = SecondsSince(setup_start);
     Log::Info("Experimental Metal device: %s", [[device_ name] UTF8String]);
   }
 
+  ~MetalHistogramEngine() {
+    if (profile_enabled_) {
+      Log::Info("Metal profile: setup=%.6fs mirror=%.6fs gradients=%.6fs preparation=%.6fs gpu_wait=%.6fs merge=%.6fs dispatches=%llu allocated=%.1fMiB",
+                setup_seconds_, mirror_seconds_, gradient_seconds_, preparation_seconds_,
+                gpu_wait_seconds_, merge_seconds_, static_cast<unsigned long long>(dispatches_),
+                double(buffer_bytes_) / (1024.0 * 1024.0));
+    }
+  }
+
   bool MirrorDataset(const Dataset* dataset, const std::vector<int>& groups) {
+    const auto mirror_start = ProfileClock::now();
     active_ = false;
     matrix_ = nil;
     gradient_ = nil;
@@ -124,7 +164,7 @@ class MetalHistogramEngine {
       return false;
     }
     const uint64_t shards = (uint64_t(rows_) + kRowsPerShard - 1) / kRowsPerShard;
-    const uint64_t output_bytes = shards * groups_ * kBins * sizeof(float);
+    const uint64_t output_bytes = shards * groups_ * kBins * sizeof(int64_t);
     if (output_bytes > [device_ maxBufferLength] ||
         shards * groups_ * kBins > std::numeric_limits<uint32_t>::max()) {
       Log::Warning("Metal histogram buffer exceeds device limit; using CPU");
@@ -145,6 +185,8 @@ class MetalHistogramEngine {
       Log::Warning("Metal buffer allocation failed; using CPU");
       return false;
     }
+    buffer_bytes_ = matrix_elements + uint64_t(rows_) * (sizeof(float) * 2 + sizeof(uint32_t)) +
+                    groups_ + output_bytes * 2;
 
     std::vector<std::unique_ptr<BinIterator>> iterators;
     iterators.reserve(groups_);
@@ -167,6 +209,7 @@ class MetalHistogramEngine {
       }
     }
     active_ = true;
+    if (profile_enabled_) mirror_seconds_ += SecondsSince(mirror_start);
     Log::Info("Metal mirrored %u rows and %u dense feature groups", rows_, groups_);
     return true;
   }
@@ -175,6 +218,7 @@ class MetalHistogramEngine {
 
   void SetGradients(const score_t* gradients, const score_t* hessians) {
     if (!active_) return;
+    const auto gradient_start = ProfileClock::now();
     auto* gpu_gradient = static_cast<float*>([gradient_ contents]);
     auto* gpu_hessian = static_cast<float*>([hessian_ contents]);
     double max_abs_gradient = 0.0;
@@ -187,13 +231,16 @@ class MetalHistogramEngine {
     }
     auto safe_scale = [](double max_abs) -> float {
       if (!std::isfinite(max_abs)) return 0.0f;
-      if (max_abs == 0.0) return 100000000.0f;
+      if (max_abs == 0.0) return 1.0f;
       const double limit = double(std::numeric_limits<int32_t>::max()) /
-                           (double(kRowsPerShard) * max_abs * 1.01);
-      return limit >= 1.0 ? static_cast<float>(std::min(100000000.0, std::floor(limit))) : 0.0f;
+                           (double(kRowsPerChunk) * max_abs * 1.01);
+      const double scale = std::min(1.0e30, std::floor(limit));
+      if (scale < 1.0 || max_abs * scale < 1024.0) return 0.0f;
+      return static_cast<float>(scale);
     };
     gradient_scale_ = safe_scale(max_abs_gradient);
     hessian_scale_ = safe_scale(max_abs_hessian);
+    if (profile_enabled_) gradient_seconds_ += SecondsSince(gradient_start);
   }
 
   bool Build(const data_size_t* row_indices, data_size_t selected_rows,
@@ -205,11 +252,8 @@ class MetalHistogramEngine {
     if (std::none_of(group_mask.begin(), group_mask.end(), [](uint8_t used) { return used != 0; })) {
       return false;
     }
-    const uint64_t work_items = uint64_t(selected_rows) * groups_;
-    if (work_items > std::numeric_limits<uint32_t>::max()) return false;
+    const auto preparation_start = ProfileClock::now();
     const uint32_t shards = (uint64_t(selected_rows) + kRowsPerShard - 1) / kRowsPerShard;
-    const uint64_t output_elements = uint64_t(shards) * groups_ * kBins;
-    const size_t output_bytes = static_cast<size_t>(output_elements * sizeof(float));
     auto* gpu_indices = static_cast<uint32_t*>([indices_ contents]);
     for (data_size_t row = 0; row < selected_rows; ++row) {
       gpu_indices[row] = row_indices ? static_cast<uint32_t>(row_indices[row]) : static_cast<uint32_t>(row);
@@ -218,9 +262,6 @@ class MetalHistogramEngine {
       }
     }
     std::memcpy([mask_ contents], group_mask.data(), groups_);
-    std::memset([output_gradient_ contents], 0, output_bytes);
-    std::memset([output_hessian_ contents], 0, output_bytes);
-
     const MetalParams params{static_cast<uint32_t>(selected_rows), groups_, kRowsPerShard,
                              gradient_scale_, hessian_scale_};
     id<MTLCommandBuffer> command = [queue_ commandBuffer];
@@ -234,17 +275,23 @@ class MetalHistogramEngine {
     [encoder setBuffer:output_gradient_ offset:0 atIndex:5];
     [encoder setBuffer:output_hessian_ offset:0 atIndex:6];
     [encoder setBytes:&params length:sizeof(params) atIndex:7];
-    const NSUInteger threads = std::min<NSUInteger>(256, [pipeline_ maxTotalThreadsPerThreadgroup]);
-    [encoder dispatchThreads:MTLSizeMake(work_items, 1, 1)
-        threadsPerThreadgroup:MTLSizeMake(threads, 1, 1)];
+    if ([pipeline_ maxTotalThreadsPerThreadgroup] < kBins) {
+      Log::Fatal("Metal device cannot run the required 256-thread histogram group");
+    }
+    [encoder dispatchThreadgroups:MTLSizeMake(groups_, shards, 1)
+        threadsPerThreadgroup:MTLSizeMake(kBins, 1, 1)];
     [encoder endEncoding];
+    if (profile_enabled_) preparation_seconds_ += SecondsSince(preparation_start);
+    const auto gpu_start = ProfileClock::now();
     [command commit];
     [command waitUntilCompleted];
+    if (profile_enabled_) gpu_wait_seconds_ += SecondsSince(gpu_start);
     if ([command status] != MTLCommandBufferStatusCompleted) {
       Log::Fatal("Metal histogram command failed: %s", ErrorDescription([command error]).c_str());
     }
-    const auto* gpu_gradient = static_cast<const int32_t*>([output_gradient_ contents]);
-    const auto* gpu_hessian = static_cast<const int32_t*>([output_hessian_ contents]);
+    const auto* gpu_gradient = static_cast<const int64_t*>([output_gradient_ contents]);
+    const auto* gpu_hessian = static_cast<const int64_t*>([output_hessian_ contents]);
+    const auto merge_start = ProfileClock::now();
     for (uint32_t feature = 0; feature < groups_; ++feature) {
       if (!group_mask[feature]) continue;
       const int group = groups[feature];
@@ -261,6 +308,10 @@ class MetalHistogramEngine {
         GET_GRAD(group_histogram, bin) = sum_gradient;
         GET_HESS(group_histogram, bin) = sum_hessian;
       }
+    }
+    if (profile_enabled_) {
+      merge_seconds_ += SecondsSince(merge_start);
+      ++dispatches_;
     }
     return true;
     }
@@ -282,6 +333,15 @@ class MetalHistogramEngine {
   bool active_ = false;
   float gradient_scale_ = 0.0f;
   float hessian_scale_ = 0.0f;
+  bool profile_enabled_ = false;
+  uint64_t buffer_bytes_ = 0;
+  uint64_t dispatches_ = 0;
+  double setup_seconds_ = 0.0;
+  double mirror_seconds_ = 0.0;
+  double gradient_seconds_ = 0.0;
+  double preparation_seconds_ = 0.0;
+  double gpu_wait_seconds_ = 0.0;
+  double merge_seconds_ = 0.0;
 };
 
 MetalTreeLearner::MetalTreeLearner(const Config* config)
@@ -290,6 +350,16 @@ MetalTreeLearner::MetalTreeLearner(const Config* config)
   force_cpu_ = force_cpu != nullptr && std::strcmp(force_cpu, "1") == 0;
   const char* compare_hist = std::getenv("LGBM_METAL_COMPARE_HIST");
   compare_hist_ = compare_hist != nullptr && std::strcmp(compare_hist, "1") == 0;
+  const char* min_leaf_rows = std::getenv("LGBM_METAL_MIN_LEAF_ROWS");
+  if (min_leaf_rows != nullptr) {
+    char* end = nullptr;
+    const long parsed = std::strtol(min_leaf_rows, &end, 10);
+    if (end == min_leaf_rows || *end != '\0' || parsed < 0 ||
+        parsed > std::numeric_limits<data_size_t>::max()) {
+      Log::Fatal("LGBM_METAL_MIN_LEAF_ROWS must be a non-negative integer");
+    }
+    min_leaf_rows_ = static_cast<data_size_t>(parsed);
+  }
   if (force_cpu_) {
     Log::Info("Metal diagnostic mode: CPU histograms are forced");
   }
@@ -299,14 +369,14 @@ MetalTreeLearner::~MetalTreeLearner() = default;
 
 void MetalTreeLearner::Init(const Dataset* train_data, bool is_constant_hessian) {
   SerialTreeLearner::Init(train_data, is_constant_hessian);
-  if (!force_cpu_) BuildMirror();
+  if (!force_cpu_ && !is_constant_hessian) BuildMirror();
 }
 
 void MetalTreeLearner::ResetTrainingDataInner(const Dataset* train_data,
                                                bool is_constant_hessian,
                                                bool reset_multi_val_bin) {
   SerialTreeLearner::ResetTrainingDataInner(train_data, is_constant_hessian, reset_multi_val_bin);
-  if (!force_cpu_) BuildMirror();
+  if (!force_cpu_ && !is_constant_hessian) BuildMirror();
 }
 
 void MetalTreeLearner::BuildMirror() {
@@ -344,7 +414,7 @@ bool MetalTreeLearner::BuildLeafHistogram(const data_size_t* row_indices,
                                            hist_t* destination,
                                            double leaf_gradient,
                                            double leaf_hessian) {
-  if (share_state_->is_constant_hessian) return false;
+  if (share_state_->is_constant_hessian || row_count < min_leaf_rows_) return false;
   const bool used = engine_->Build(row_indices, row_count, group_mask,
                                    train_data_, metal_groups_, destination);
   if (used) {
