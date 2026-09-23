@@ -34,9 +34,11 @@ class MetalTreeLearner final : public SerialTreeLearner {
 
  private:
   void BuildMirror();
-  bool BuildLeafHistogram(const data_size_t* row_indices, data_size_t row_count,
-                          const std::vector<uint8_t>& group_mask, hist_t* destination,
-                          double leaf_gradient, double leaf_hessian);
+  bool BeginLeafHistogram(const data_size_t* row_indices, data_size_t row_count,
+                          const std::vector<uint8_t>& group_mask);
+  void FinishLeafHistogram(const std::vector<uint8_t>& group_mask,
+                           hist_t* destination, double leaf_gradient,
+                           double leaf_hessian);
 
   std::unique_ptr<MetalHistogramEngine> engine_;
   std::vector<int> metal_groups_;
@@ -44,6 +46,7 @@ class MetalTreeLearner final : public SerialTreeLearner {
   std::vector<int> group_feature_count_;
   bool logged_dispatch_ = false;
   bool force_cpu_ = false;
+  bool disable_overlap_ = false;
   bool compare_hist_ = false;
   bool compared_hist_ = false;
   data_size_t min_leaf_rows_ = 0;

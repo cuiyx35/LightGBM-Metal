@@ -138,10 +138,12 @@ class MetalHistogramEngine {
   }
 
   ~MetalHistogramEngine() {
+    if (inflight_command_) [inflight_command_ waitUntilCompleted];
     if (profile_enabled_) {
-      Log::Info("Metal profile: setup=%.6fs mirror=%.6fs gradients=%.6fs preparation=%.6fs gpu_wait=%.6fs merge=%.6fs dispatches=%llu allocated=%.1fMiB",
+      Log::Info("Metal profile: setup=%.6fs mirror=%.6fs gradients=%.6fs preparation=%.6fs gpu_inflight=%.6fs gpu_wait=%.6fs merge=%.6fs dispatches=%llu allocated=%.1fMiB",
                 setup_seconds_, mirror_seconds_, gradient_seconds_, preparation_seconds_,
-                gpu_wait_seconds_, merge_seconds_, static_cast<unsigned long long>(dispatches_),
+                gpu_inflight_seconds_, gpu_wait_seconds_, merge_seconds_,
+                static_cast<unsigned long long>(dispatches_),
                 double(buffer_bytes_) / (1024.0 * 1024.0));
     }
   }
@@ -245,17 +247,16 @@ class MetalHistogramEngine {
     if (profile_enabled_) gradient_seconds_ += SecondsSince(gradient_start);
   }
 
-  bool Build(const data_size_t* row_indices, data_size_t selected_rows,
-             const std::vector<uint8_t>& group_mask,
-             const Dataset* dataset, const std::vector<int>& groups,
-             hist_t* destination) {
+  bool BeginBuild(const data_size_t* row_indices, data_size_t selected_rows,
+                  const std::vector<uint8_t>& group_mask) {
     @autoreleasepool {
     if (!active_ || selected_rows <= 0 || gradient_scale_ == 0.0f || hessian_scale_ == 0.0f) return false;
     if (std::none_of(group_mask.begin(), group_mask.end(), [](uint8_t used) { return used != 0; })) {
       return false;
     }
+    if (inflight_command_) Log::Fatal("Metal histogram build is already in flight");
     const auto preparation_start = ProfileClock::now();
-    const uint32_t shards = (uint64_t(selected_rows) + kRowsPerShard - 1) / kRowsPerShard;
+    inflight_shards_ = (uint64_t(selected_rows) + kRowsPerShard - 1) / kRowsPerShard;
     auto* gpu_indices = static_cast<uint32_t*>([indices_ contents]);
     for (data_size_t row = 0; row < selected_rows; ++row) {
       gpu_indices[row] = row_indices ? static_cast<uint32_t>(row_indices[row]) : static_cast<uint32_t>(row);
@@ -280,17 +281,33 @@ class MetalHistogramEngine {
     if ([pipeline_ maxTotalThreadsPerThreadgroup] < kBins) {
       Log::Fatal("Metal device cannot run the required 256-thread histogram group");
     }
-    [encoder dispatchThreadgroups:MTLSizeMake(groups_, shards, 1)
+    [encoder dispatchThreadgroups:MTLSizeMake(groups_, inflight_shards_, 1)
         threadsPerThreadgroup:MTLSizeMake(kBins, 1, 1)];
     [encoder endEncoding];
     if (profile_enabled_) preparation_seconds_ += SecondsSince(preparation_start);
-    const auto gpu_start = ProfileClock::now();
     [command commit];
-    [command waitUntilCompleted];
-    if (profile_enabled_) gpu_wait_seconds_ += SecondsSince(gpu_start);
-    if ([command status] != MTLCommandBufferStatusCompleted) {
-      Log::Fatal("Metal histogram command failed: %s", ErrorDescription([command error]).c_str());
+    inflight_command_ = command;
+    if (profile_enabled_) inflight_start_ = ProfileClock::now();
+    return true;
     }
+  }
+
+  void FinishBuild(const std::vector<uint8_t>& group_mask,
+                   const Dataset* dataset, const std::vector<int>& groups,
+                   hist_t* destination) {
+    @autoreleasepool {
+    if (!inflight_command_) Log::Fatal("No Metal histogram build is in flight");
+    const auto wait_start = ProfileClock::now();
+    [inflight_command_ waitUntilCompleted];
+    if (profile_enabled_) {
+      gpu_wait_seconds_ += SecondsSince(wait_start);
+      gpu_inflight_seconds_ += SecondsSince(inflight_start_);
+    }
+    if ([inflight_command_ status] != MTLCommandBufferStatusCompleted) {
+      Log::Fatal("Metal histogram command failed: %s",
+                 ErrorDescription([inflight_command_ error]).c_str());
+    }
+    inflight_command_ = nil;
     const auto* gpu_gradient = static_cast<const int64_t*>([output_gradient_ contents]);
     const auto* gpu_hessian = static_cast<const int64_t*>([output_hessian_ contents]);
     const auto merge_start = ProfileClock::now();
@@ -302,7 +319,7 @@ class MetalHistogramEngine {
       for (uint32_t bin = 0; bin < group_bins; ++bin) {
         double sum_gradient = 0.0;
         double sum_hessian = 0.0;
-        for (uint32_t shard = 0; shard < shards; ++shard) {
+        for (uint32_t shard = 0; shard < inflight_shards_; ++shard) {
           const uint64_t offset = (uint64_t(shard) * groups_ + feature) * kBins + bin;
           sum_gradient += double(gpu_gradient[offset]) / gradient_scale_;
           sum_hessian += double(gpu_hessian[offset]) / hessian_scale_;
@@ -315,7 +332,6 @@ class MetalHistogramEngine {
       merge_seconds_ += SecondsSince(merge_start);
       ++dispatches_;
     }
-    return true;
     }
   }
 
@@ -330,6 +346,9 @@ class MetalHistogramEngine {
   __strong id<MTLBuffer> mask_ = nil;
   __strong id<MTLBuffer> output_gradient_ = nil;
   __strong id<MTLBuffer> output_hessian_ = nil;
+  __strong id<MTLCommandBuffer> inflight_command_ = nil;
+  uint32_t inflight_shards_ = 0;
+  ProfileClock::time_point inflight_start_{};
   uint32_t rows_ = 0;
   uint32_t groups_ = 0;
   bool active_ = false;
@@ -342,6 +361,7 @@ class MetalHistogramEngine {
   double mirror_seconds_ = 0.0;
   double gradient_seconds_ = 0.0;
   double preparation_seconds_ = 0.0;
+  double gpu_inflight_seconds_ = 0.0;
   double gpu_wait_seconds_ = 0.0;
   double merge_seconds_ = 0.0;
 };
@@ -350,6 +370,8 @@ MetalTreeLearner::MetalTreeLearner(const Config* config)
     : SerialTreeLearner(config), engine_(new MetalHistogramEngine()) {
   const char* force_cpu = std::getenv("LGBM_METAL_FORCE_CPU");
   force_cpu_ = force_cpu != nullptr && std::strcmp(force_cpu, "1") == 0;
+  const char* disable_overlap = std::getenv("LGBM_METAL_DISABLE_OVERLAP");
+  disable_overlap_ = disable_overlap != nullptr && std::strcmp(disable_overlap, "1") == 0;
   const char* compare_hist = std::getenv("LGBM_METAL_COMPARE_HIST");
   compare_hist_ = compare_hist != nullptr && std::strcmp(compare_hist, "1") == 0;
   const char* min_leaf_rows = std::getenv("LGBM_METAL_MIN_LEAF_ROWS");
@@ -364,6 +386,8 @@ MetalTreeLearner::MetalTreeLearner(const Config* config)
   }
   if (force_cpu_) {
     Log::Info("Metal diagnostic mode: CPU histograms are forced");
+  } else if (disable_overlap_) {
+    Log::Info("Metal diagnostic mode: CPU and GPU histogram work is serialized");
   }
 }
 
@@ -385,6 +409,11 @@ void MetalTreeLearner::BuildMirror() {
   metal_groups_.clear();
   group_to_slot_.assign(train_data_->num_feature_groups(), -1);
   group_feature_count_.assign(train_data_->num_feature_groups(), 0);
+  if (!share_state_->is_col_wise) {
+    engine_->MirrorDataset(train_data_, metal_groups_);
+    Log::Warning("Metal histograms require column-wise training; using CPU. Set force_col_wise=true to enable Metal");
+    return;
+  }
   for (int feature = 0; feature < num_features_; ++feature) {
     ++group_feature_count_[train_data_->Feature2Group(feature)];
   }
@@ -405,58 +434,60 @@ void MetalTreeLearner::BuildMirror() {
 
 void MetalTreeLearner::BeforeTrain() {
   SerialTreeLearner::BeforeTrain();
-  if (engine_->active() && !share_state_->is_constant_hessian) {
+  if (engine_->active() && share_state_->is_col_wise &&
+      !share_state_->is_constant_hessian) {
     engine_->SetGradients(gradients_, hessians_);
   }
 }
 
-bool MetalTreeLearner::BuildLeafHistogram(const data_size_t* row_indices,
-                                           data_size_t row_count,
-                                           const std::vector<uint8_t>& group_mask,
+bool MetalTreeLearner::BeginLeafHistogram(const data_size_t* row_indices,
+                                          data_size_t row_count,
+                                          const std::vector<uint8_t>& group_mask) {
+  if (share_state_->is_constant_hessian || row_count < min_leaf_rows_) return false;
+  return engine_->BeginBuild(row_indices, row_count, group_mask);
+}
+
+void MetalTreeLearner::FinishLeafHistogram(const std::vector<uint8_t>& group_mask,
                                            hist_t* destination,
                                            double leaf_gradient,
                                            double leaf_hessian) {
-  if (share_state_->is_constant_hessian || row_count < min_leaf_rows_) return false;
-  const bool used = engine_->Build(row_indices, row_count, group_mask,
-                                   train_data_, metal_groups_, destination);
-  if (used) {
-    for (int feature = 0; feature < num_features_; ++feature) {
-      const int group = train_data_->Feature2Group(feature);
-      const int slot = group_to_slot_[group];
-      if (slot < 0 || !group_mask[slot]) continue;
-      const int frequent_bin = train_data_->FeatureBinMapper(feature)->GetMostFreqBin();
-      if (frequent_bin <= 0) continue;
-      hist_t* group_histogram = destination + train_data_->GroupBinBoundary(group) * 2;
-      const int group_bins = train_data_->FeatureGroupNumBin(group);
-      double sum_gradient = 0.0;
-      double sum_hessian = 0.0;
-      int correction_bin = -1;
-      double largest_hessian = -1.0;
-      for (int bin = 0; bin < group_bins; ++bin) {
-        sum_gradient += GET_GRAD(group_histogram, bin);
-        sum_hessian += GET_HESS(group_histogram, bin);
-        if (bin > 0 && bin != frequent_bin + 1 &&
-            GET_HESS(group_histogram, bin) > largest_hessian) {
-          correction_bin = bin;
-          largest_hessian = GET_HESS(group_histogram, bin);
-        }
-      }
-      if (correction_bin >= 0) {
-        GET_GRAD(group_histogram, correction_bin) += leaf_gradient - sum_gradient;
-        GET_HESS(group_histogram, correction_bin) += leaf_hessian - sum_hessian;
+  engine_->FinishBuild(group_mask, train_data_, metal_groups_, destination);
+  for (int feature = 0; feature < num_features_; ++feature) {
+    const int group = train_data_->Feature2Group(feature);
+    const int slot = group_to_slot_[group];
+    if (slot < 0 || !group_mask[slot]) continue;
+    const int frequent_bin = train_data_->FeatureBinMapper(feature)->GetMostFreqBin();
+    if (frequent_bin <= 0) continue;
+    hist_t* group_histogram = destination + train_data_->GroupBinBoundary(group) * 2;
+    const int group_bins = train_data_->FeatureGroupNumBin(group);
+    double sum_gradient = 0.0;
+    double sum_hessian = 0.0;
+    int correction_bin = -1;
+    double largest_hessian = -1.0;
+    for (int bin = 0; bin < group_bins; ++bin) {
+      sum_gradient += GET_GRAD(group_histogram, bin);
+      sum_hessian += GET_HESS(group_histogram, bin);
+      if (bin > 0 && bin != frequent_bin + 1 &&
+          GET_HESS(group_histogram, bin) > largest_hessian) {
+        correction_bin = bin;
+        largest_hessian = GET_HESS(group_histogram, bin);
       }
     }
+    if (correction_bin >= 0) {
+      GET_GRAD(group_histogram, correction_bin) += leaf_gradient - sum_gradient;
+      GET_HESS(group_histogram, correction_bin) += leaf_hessian - sum_hessian;
+    }
   }
-  if (used && !logged_dispatch_) {
+  if (!logged_dispatch_) {
     Log::Info("Metal histogram kernel dispatched for LightGBM tree training");
     logged_dispatch_ = true;
   }
-  return used;
 }
 
 void MetalTreeLearner::ConstructHistograms(const std::vector<int8_t>& is_feature_used,
                                            bool use_subtract) {
-  if (force_cpu_ || !engine_->active() || share_state_->is_constant_hessian) {
+  if (force_cpu_ || !engine_->active() || !share_state_->is_col_wise ||
+      share_state_->is_constant_hessian) {
     SerialTreeLearner::ConstructHistograms(is_feature_used, use_subtract);
     return;
   }
@@ -471,11 +502,22 @@ void MetalTreeLearner::ConstructHistograms(const std::vector<int8_t>& is_feature
     }
   }
   hist_t* smaller = smaller_leaf_histogram_array_[0].RawData() - kHistOffset;
-  const bool smaller_gpu = BuildLeafHistogram(smaller_leaf_splits_->data_indices(),
-                                               smaller_leaf_splits_->num_data_in_leaf(),
-                                               group_mask, smaller,
-                                               smaller_leaf_splits_->sum_gradients(),
-                                               smaller_leaf_splits_->sum_hessians());
+  const bool smaller_gpu = BeginLeafHistogram(smaller_leaf_splits_->data_indices(),
+                                              smaller_leaf_splits_->num_data_in_leaf(),
+                                              group_mask);
+  if (smaller_gpu && disable_overlap_) {
+    FinishLeafHistogram(group_mask, smaller, smaller_leaf_splits_->sum_gradients(),
+                        smaller_leaf_splits_->sum_hessians());
+  }
+  train_data_->ConstructHistograms<false, 0>(
+      smaller_gpu ? cpu_features : is_feature_used,
+      smaller_leaf_splits_->data_indices(), smaller_leaf_splits_->num_data_in_leaf(),
+      gradients_, hessians_, ordered_gradients_.data(), ordered_hessians_.data(),
+      share_state_.get(), smaller);
+  if (smaller_gpu && !disable_overlap_) {
+    FinishLeafHistogram(group_mask, smaller, smaller_leaf_splits_->sum_gradients(),
+                        smaller_leaf_splits_->sum_hessians());
+  }
   if (smaller_gpu && compare_hist_ && !compared_hist_) {
     std::vector<int8_t> gpu_features(num_features_, 0);
     for (int feature = 0; feature < num_features_; ++feature) {
@@ -568,24 +610,24 @@ void MetalTreeLearner::ConstructHistograms(const std::vector<int8_t>& is_feature
     }
     compared_hist_ = true;
   }
-  train_data_->ConstructHistograms<false, 0>(
-      smaller_gpu ? cpu_features : is_feature_used,
-      smaller_leaf_splits_->data_indices(), smaller_leaf_splits_->num_data_in_leaf(),
-      gradients_, hessians_, ordered_gradients_.data(), ordered_hessians_.data(),
-      share_state_.get(), smaller);
-
   if (larger_leaf_histogram_array_ != nullptr && !use_subtract) {
     hist_t* larger = larger_leaf_histogram_array_[0].RawData() - kHistOffset;
-    const bool larger_gpu = BuildLeafHistogram(larger_leaf_splits_->data_indices(),
-                                                larger_leaf_splits_->num_data_in_leaf(),
-                                                group_mask, larger,
-                                                larger_leaf_splits_->sum_gradients(),
-                                                larger_leaf_splits_->sum_hessians());
+    const bool larger_gpu = BeginLeafHistogram(larger_leaf_splits_->data_indices(),
+                                               larger_leaf_splits_->num_data_in_leaf(),
+                                               group_mask);
+    if (larger_gpu && disable_overlap_) {
+      FinishLeafHistogram(group_mask, larger, larger_leaf_splits_->sum_gradients(),
+                          larger_leaf_splits_->sum_hessians());
+    }
     train_data_->ConstructHistograms<false, 0>(
         larger_gpu ? cpu_features : is_feature_used,
         larger_leaf_splits_->data_indices(), larger_leaf_splits_->num_data_in_leaf(),
         gradients_, hessians_, ordered_gradients_.data(), ordered_hessians_.data(),
         share_state_.get(), larger);
+    if (larger_gpu && !disable_overlap_) {
+      FinishLeafHistogram(group_mask, larger, larger_leaf_splits_->sum_gradients(),
+                          larger_leaf_splits_->sum_hessians());
+    }
   }
 }
 
