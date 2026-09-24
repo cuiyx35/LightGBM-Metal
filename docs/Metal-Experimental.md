@@ -37,8 +37,6 @@ model.save_model("model.txt")
 python examples/python-guide/metal_validate.py --output metal_validation.json
 ~~~
 
-验证与基准脚本都提供命令行参数、退出码和 JSON 输出，可用于 CI 或 AI 辅助接入。LightGBM 已有训练 CLI 和 Python 回调；运行或查看本实验结果不依赖单独的监控界面。
-
 ## 公开合成基准
 
 [<code>examples/python-guide/metal_synthetic_benchmark.py</code>](../examples/python-guide/metal_synthetic_benchmark.py)按固定种子在本地生成所有特征和标签。默认运行 3 万训练行的快速冒烟测试。显式指定 <code>--full-scale</code> 时，规模为 330 万训练行、80 万留出行、512 个特征（150 个稠密数值特征和 362 个稀有二元特征）、500 轮 boosting。完整规模在一棵树的预热后，交替运行两次 Metal 与两次 CPU，复用同一个已构建的 Dataset。报告包含耗时、合成标签上的 AP/AUC、预测差、重复运行哈希和进程峰值 RSS。脚本不读取外部数据文件，报告不包含逐行样本或预测值。

@@ -36,9 +36,7 @@ require this fork's Python package and Metal-enabled native library; verify
 the imported paths before interpreting a benchmark. Profiling environment
 variables add overhead and should be off for headline timing.
 
-The Star History chart uses a public <code>api.star-history.com</code> embed. Never put a personal access token in a README, URL, or repository configuration.
-
 Do not push to the `upstream` remote, which points at official LightGBM.
-For a public project, first add an `origin` remote under the owner's GitHub
-account and review the target and commit identity. Public source benchmarks
+Push only to the owner's `origin` remote after reviewing the target and
+commit identity. Public source benchmarks
 must use generated data only.

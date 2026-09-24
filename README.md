@@ -46,8 +46,6 @@ python examples/python-guide/metal_synthetic_benchmark.py \
   --full-scale --output synthetic_metal_result.json
 ~~~
 
-脚本只生成本地合成数据，不读取外部数据文件；公开报告不包含逐行预测。
-
 ## Star History
 
 <a href="https://www.star-history.com/?repos=cuiyx35%2FLightGBM-Metal&type=date&legend=top-left">
@@ -56,8 +54,6 @@ python examples/python-guide/metal_synthetic_benchmark.py \
     <img alt="LightGBM-Metal 的 Star History" src="https://api.star-history.com/chart?repos=cuiyx35/LightGBM-Metal&type=date&legend=top-left" />
   </picture>
 </a>
-
-图由第三方服务 [Star History](https://www.star-history.com/) 实时提供，不需要个人访问令牌。新仓库在出现第一颗星前可能只显示空坐标轴。
 
 ## 文档与二次开发
 
@@ -68,10 +64,6 @@ python examples/python-guide/metal_synthetic_benchmark.py \
 | 架构与扩展流程 | [开发指南](docs/Metal-Development.md) | [Development guide](docs/Metal-Development.en.md) |
 | 测试结果与限制 | [公开基准报告](benchmarks/metal/README.md) | [Benchmark report](benchmarks/metal/README.en.md) |
 | AI 编码约束 | [AGENTS.md](AGENTS.md) | [AGENTS.en.md](AGENTS.en.md) |
-
-上表覆盖本实验分支的专属说明；通用 LightGBM 上游文档仍保持原文。
-
-验证和基准脚本提供命令行参数、退出码与 JSON 输出，适合在 CI 或 AI 辅助开发流程中调用。更改 Metal 后端时，保留 <code>USE_METAL=OFF</code> 下的上游行为，并使用生成数据检查模型结构、预测、性能和回退路径。
 
 ## 来源与许可
 

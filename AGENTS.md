@@ -19,6 +19,4 @@
 
 Python 脚本写出汇总 JSON，失败时以非零状态退出。它们需要本分支的 Python 包和启用 Metal 的原生库；解读基准前先确认实际导入路径。profiling 环境变量会带来额外开销，主报告计时应关闭。
 
-Star History 图使用 <code>api.star-history.com</code> 的公开嵌入链接；不要在 README、链接或仓库配置中加入个人访问令牌。
-
 不要推送到指向 LightGBM 官方仓库的 <code>upstream</code> 远端。公开项目只推送到仓库所有者账号下的 <code>origin</code>，推送前复核目标和提交署名。公开源码基准只能使用生成数据。

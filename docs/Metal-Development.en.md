@@ -76,12 +76,8 @@ Follow [the experimental user notes](Metal-Experimental.en.md) for prerequisites
 On a Mac with CMake and OpenMP configured:
 
 ```bash
-cmake -S . -B build-metal -DCMAKE_BUILD_TYPE=Release -DUSE_METAL=ON
-cmake --build build-metal -j2
-ln -sfn ../lib_lightgbm.dylib python-package/lib_lightgbm.dylib
-export PYTHONPATH="$PWD/python-package"
-python examples/python-guide/metal_validate.py --output metal_validation.json
-python examples/python-guide/metal_synthetic_benchmark.py \
+bash tools/build-metal-macos.sh --validate
+PYTHONPATH="$PWD/python-package" python3 examples/python-guide/metal_synthetic_benchmark.py \
   --output metal_quick_benchmark.json
 ```
 
@@ -122,5 +118,4 @@ The benchmark results in [`benchmarks/metal`](../benchmarks/metal/README.en.md)
 come from one Apple M5 and generated data. A different M-series chip,
 OpenMP setup, feature distribution, or tree depth can change the balance
 between CPU and GPU. Keep real application data and identifiers out of the
-fork. Preserve the upstream MIT license and submodule notices. Review Git
-commit authorship and the target remote before any public push.
+fork. Preserve the upstream MIT license and submodule notices.

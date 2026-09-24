@@ -64,11 +64,6 @@ models to reproduce CPU predictions exactly.
 python examples/python-guide/metal_validate.py --output metal_validation.json
 ```
 
-The two scripts provide command-line arguments, exit codes, and JSON output
-for CI or AI-assisted integration. LightGBM already has its own training CLI
-and Python callbacks; a separate monitoring dashboard is not required to
-run or inspect this experiment.
-
 ## Public synthetic benchmark
 
 [`examples/python-guide/metal_synthetic_benchmark.py`](../examples/python-guide/metal_synthetic_benchmark.py)

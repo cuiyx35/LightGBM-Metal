@@ -46,8 +46,6 @@ python examples/python-guide/metal_synthetic_benchmark.py \
   --full-scale --output synthetic_metal_result.json
 ~~~
 
-The script generates data locally and reads no external data file. Public reports contain no row-level predictions.
-
 ## Star History
 
 <a href="https://www.star-history.com/?repos=cuiyx35%2FLightGBM-Metal&type=date&legend=top-left">
@@ -56,8 +54,6 @@ The script generates data locally and reads no external data file. Public report
     <img alt="LightGBM-Metal Star History" src="https://api.star-history.com/chart?repos=cuiyx35/LightGBM-Metal&type=date&legend=top-left" />
   </picture>
 </a>
-
-The chart is served live by the third-party [Star History](https://www.star-history.com/) service. No personal access token is required. Before the first star, a new repository may show only empty axes.
 
 ## Documentation and extension
 
@@ -68,10 +64,6 @@ The chart is served live by the third-party [Star History](https://www.star-hist
 | Architecture and extension workflow | [开发指南](docs/Metal-Development.md) | [Development guide](docs/Metal-Development.en.md) |
 | Benchmarks and limitations | [公开基准报告](benchmarks/metal/README.md) | [Benchmark report](benchmarks/metal/README.en.md) |
 | Coding-agent guidance | [AGENTS.md](AGENTS.md) | [AGENTS.en.md](AGENTS.en.md) |
-
-The table covers documentation specific to this experimental fork; generic upstream LightGBM docs remain in their original language.
-
-The validation and benchmark scripts provide CLI arguments, exit codes, and JSON output for CI and AI-assisted development. Backend changes should preserve upstream behavior with <code>USE_METAL=OFF</code>, and test model structure, predictions, performance, and fallbacks on generated data.
 
 ## Provenance and license
 

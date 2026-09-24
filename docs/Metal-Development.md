@@ -47,12 +47,8 @@ GPU kernel 从源码中的 <code>kMetalSource</code> 字符串在运行时编译
 前置条件见[实验使用说明](Metal-Experimental.md)。在已配置 CMake 和 OpenMP 的 Mac 上：
 
 ~~~bash
-cmake -S . -B build-metal -DCMAKE_BUILD_TYPE=Release -DUSE_METAL=ON
-cmake --build build-metal -j2
-ln -sfn ../lib_lightgbm.dylib python-package/lib_lightgbm.dylib
-export PYTHONPATH="$PWD/python-package"
-python examples/python-guide/metal_validate.py --output metal_validation.json
-python examples/python-guide/metal_synthetic_benchmark.py \
+bash tools/build-metal-macos.sh --validate
+PYTHONPATH="$PWD/python-package" python3 examples/python-guide/metal_synthetic_benchmark.py \
   --output metal_quick_benchmark.json
 ~~~
 
@@ -78,4 +74,4 @@ python examples/python-guide/metal_synthetic_benchmark.py \
 
 ## 公开发布与可移植性
 
-这是独立实验分支，不是 LightGBM 官方版本。[公开基准](../benchmarks/metal/README.md)只使用一台 Apple M5 和生成数据。其他 M 系列芯片、OpenMP 配置、特征分布或树深均可能改变 CPU/GPU 的工作平衡。不要把真实应用数据及标识符放入本仓库。保留上游 MIT 许可和子模块声明；公开推送前检查 Git 提交署名和目标远端。
+这是独立实验分支，不是 LightGBM 官方版本。[公开基准](../benchmarks/metal/README.md)只使用一台 Apple M5 和生成数据。其他 M 系列芯片、OpenMP 配置、特征分布或树深均可能改变 CPU/GPU 的工作平衡。不要把真实应用数据及标识符放入本仓库。保留上游 MIT 许可和子模块声明。
