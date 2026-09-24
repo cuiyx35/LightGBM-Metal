@@ -1,6 +1,6 @@
 # Guidance for coding agents
 
-This is the `apple-metal-experiment` branch of an independent LightGBM fork.
+This repository is an independent experimental LightGBM fork.
 The Metal backend is experimental and runs only on Apple Silicon macOS.
 Read [the Metal development guide](docs/Metal-Development.md) before changing
 the backend. Keep upstream LightGBM behavior unchanged when `USE_METAL=OFF`.
@@ -36,6 +36,7 @@ require this fork's Python package and Metal-enabled native library; verify
 the imported paths before interpreting a benchmark. Profiling environment
 variables add overhead and should be off for headline timing.
 
-Do not push this branch until the intended GitHub remote and public commit
-identity have been reviewed. Its current `origin` points at upstream
-LightGBM. Public source benchmarks must use generated data only.
+Do not push to the `upstream` remote, which points at official LightGBM.
+For a public project, first add an `origin` remote under the owner's GitHub
+account and review the target and commit identity. Public source benchmarks
+must use generated data only.

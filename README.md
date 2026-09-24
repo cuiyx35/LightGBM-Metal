@@ -1,11 +1,11 @@
 <img src=https://github.com/lightgbm-org/LightGBM/blob/main/docs/logo/LightGBM_logo_black_text.svg width=300 />
 
 > [!IMPORTANT]
-> The `apple-metal-experiment` branch is an independent experimental fork,
+> This repository is an independent experimental fork,
 > not an official LightGBM release. Its Apple Silicon Metal training path is
 > described in [Metal experimental notes](docs/Metal-Experimental.md) and
 > [the development guide](docs/Metal-Development.md).
-> Upstream badges below report upstream CI, not validation of this branch.
+> Upstream badges below report upstream CI, not validation of this fork.
 
 > [!NOTE]
 > Upstream LightGBM moved from `Microsoft/LightGBM` to `lightgbm-org/LightGBM` in March 2026.

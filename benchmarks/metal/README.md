@@ -2,7 +2,8 @@
 
 These reports were produced by the experimental Metal source branch on an
 Apple M5 Mac with 32 GiB unified memory, connected to AC power. The Metal
-implementation was at commit `885c799`. Both runs used the Metal-enabled
+implementation used the source state at commit `3e8adfd` (the same tree after
+the local author-history rewrite). Both runs used the Metal-enabled
 LightGBM 4.7.0 source checkout and the same preconstructed Dataset.
 After the benchmark, a fresh CMake configure and build directory succeeded
 with CMake 4.4.3 and Apple Clang 21; the five validation cases passed again
