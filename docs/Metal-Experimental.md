@@ -1,104 +1,57 @@
-# Experimental Metal training on Apple Silicon
+# Apple 芯片上的 Metal 训练实验
 
-This repository is an independent research fork of LightGBM 4.7.0. It adds
-`device_type="metal"` for macOS on Apple Silicon. It is not an official
-LightGBM release, and it has not been validated across M-series models.
-The standalone repository history starts with a source snapshot of upstream
-commit [`8f7036f`](https://github.com/lightgbm-org/LightGBM/commit/8f7036f03627054d5a54a6f965b13f4b9ff2cb63);
-earlier LightGBM history remains in the official repository.
-For architecture and contributor workflow, read the
-[Metal development guide](Metal-Development.md). Coding agents can also use
-the repository [AGENTS.md](../AGENTS.md).
+**简体中文** · [English](Metal-Experimental.en.md) · [返回项目首页](../README.md)
 
-The Metal path calculates histograms for eligible feature groups. The CPU
-calculates the other groups at the same time, then performs split search and
-the rest of tree training. Eligible groups currently contain one feature,
-are not multi-value groups, and have no more than 256 bins. Prediction uses
-the standard CPU model path. Metal histogram sums use fixed-point
-quantization, so the resulting trees and predictions can differ from CPU
-training. Test application quality separately before deploying a model.
+本仓库是基于 LightGBM 4.7.0 的独立研究分支，为 Apple Silicon macOS 添加 <code>device_type="metal"</code>。它不是 LightGBM 官方版本，目前只在 Apple M5 上测试过性能，尚未跨不同 M 系列芯片验证。独立仓库的历史从[上游提交 <code>8f7036f</code>](https://github.com/lightgbm-org/LightGBM/commit/8f7036f03627054d5a54a6f965b13f4b9ff2cb63)的源码快照开始；更早的历史仍在官方仓库。
 
-## Build and use
+架构和贡献流程见[Metal 开发指南](Metal-Development.md)。AI 编码工具还应阅读仓库的 [AGENTS.md](../AGENTS.md)。
 
-Building needs macOS, Apple Silicon, a Metal-capable GPU, CMake, a C++
-toolchain, and a working OpenMP runtime for parallel CPU training. The
-Python benchmark and validation scripts also need NumPy, pandas, and
-scikit-learn. Configure
-OpenMP as required by your local toolchain. A typical source build starts
-with:
+Metal 路径为符合条件的特征组计算直方图。CPU 同时计算其他特征组，再执行分裂搜索及其余建树步骤。当前符合条件的组必须只含一个特征、不是 multi-value 组、bin 数不超过 256。预测使用标准 CPU 模型路径。Metal 直方图采用定点量化，树结构与预测可能不同于纯 CPU 训练；部署前应单独验证应用场景中的模型质量。
 
-```bash
+## 构建与使用
+
+需要 Apple Silicon macOS、支持 Metal 的 GPU、CMake、C++ 工具链，以及用于 CPU 并行训练的 OpenMP 运行时。Python 基准和验证脚本还需要 NumPy、pandas、scikit-learn。请按照本机工具链配置 OpenMP。典型源码构建步骤：
+
+~~~bash
 cmake -S . -B build-metal -DCMAKE_BUILD_TYPE=Release -DUSE_METAL=ON
 cmake --build build-metal -j2
 ln -sfn ../lib_lightgbm.dylib python-package/lib_lightgbm.dylib
 export PYTHONPATH="$PWD/python-package"
-```
+~~~
 
-If OpenMP is installed outside standard library paths, also add its `lib/`
-directory to `DYLD_LIBRARY_PATH` for Python runs. Verify that Python loads
-the package and Metal-enabled `lib_lightgbm.dylib` from this checkout. For
-example:
+若 OpenMP 安装在非标准库路径，运行 Python 时还需把它的 <code>lib/</code> 目录加入 <code>DYLD_LIBRARY_PATH</code>。确认 Python 加载的是此检出目录中的包和启用 Metal 的 <code>lib_lightgbm.dylib</code>。训练参数示例：
 
-```python
+~~~python
 import lightgbm as lgb
 
 params = {"objective": "binary", "device_type": "metal", "num_threads": 6}
 model = lgb.train(params, training_dataset, num_boost_round=500)
 model.save_model("model.txt")
-```
+~~~
 
-To return to the CPU path, set `device_type="cpu"`. Model prediction and
-serialization use the usual LightGBM interfaces.
+返回 CPU 路径时设置 <code>device_type="cpu"</code>。预测和模型序列化仍使用 LightGBM 常规接口。
 
-## Scriptable validation
+## 可脚本化的模型验证
 
-[`examples/python-guide/metal_validate.py`](../examples/python-guide/metal_validate.py)
-runs five synthetic model-level cases: dense numeric, mixed missing/category/
-sparse features with bagging, multiple histogram shards, a constant
-Hessian CPU fallback, and CPU/GPU overlap versus serial execution. It checks
-CPU/Metal predictions, overlap, and model reload,
-then writes a JSON report. A failed check exits nonzero and writes
-`"status": "FAIL"`. This is a smoke test, not a rule requiring application
-models to reproduce CPU predictions exactly.
+[<code>examples/python-guide/metal_validate.py</code>](../examples/python-guide/metal_validate.py)在生成数据上运行五类模型级检查：稠密数值特征；带缺失值、类别、稀疏特征和 bagging 的混合输入；多直方图分片；常数 Hessian 情形下的 CPU 回退；CPU/GPU 并发与串行执行对照。脚本检查 CPU/Metal 预测、并发结果和模型重载，写出 JSON 报告；检查失败时退出码非零，并写入 <code>"status": "FAIL"</code>。这是冒烟测试，不要求应用模型的预测与 CPU 完全一致。
 
-```bash
+~~~bash
 python examples/python-guide/metal_validate.py --output metal_validation.json
-```
+~~~
 
-The two scripts provide command-line arguments, exit codes, and JSON output
-for CI or AI-assisted integration. LightGBM already has its own training CLI
-and Python callbacks; a separate monitoring dashboard is not required to
-run or inspect this experiment.
+验证与基准脚本都提供命令行参数、退出码和 JSON 输出，可用于 CI 或 AI 辅助接入。LightGBM 已有训练 CLI 和 Python 回调；运行或查看本实验结果不依赖单独的监控界面。
 
-## Public synthetic benchmark
+## 公开合成基准
 
-[`examples/python-guide/metal_synthetic_benchmark.py`](../examples/python-guide/metal_synthetic_benchmark.py)
-generates all its rows and labels locally from a fixed seed. By default it
-runs a quick 30,000-fit-row smoke test. Explicit `--full-scale` selects 3.3
-million fit rows, 0.8 million held rows, 512 features (150 dense numeric and
-362 rare binary), and 500 boosting rounds. The full-scale preset alternates two
-Metal and two CPU runs after one-tree warmups, using the same constructed
-Dataset. It reports timing, AP/AUC on synthetic labels, prediction differences,
-repeated-run hashes, and process peak RSS. No external data file is read and
-the report contains no row-level examples or predictions.
+[<code>examples/python-guide/metal_synthetic_benchmark.py</code>](../examples/python-guide/metal_synthetic_benchmark.py)按固定种子在本地生成所有特征和标签。默认运行 3 万训练行的快速冒烟测试。显式指定 <code>--full-scale</code> 时，规模为 330 万训练行、80 万留出行、512 个特征（150 个稠密数值特征和 362 个稀有二元特征）、500 轮 boosting。完整规模在一棵树的预热后，交替运行两次 Metal 与两次 CPU，复用同一个已构建的 Dataset。报告包含耗时、合成标签上的 AP/AUC、预测差、重复运行哈希和进程峰值 RSS。脚本不读取外部数据文件，报告不包含逐行样本或预测值。
 
-```bash
+~~~bash
 python examples/python-guide/metal_synthetic_benchmark.py \
   --full-scale --output synthetic_metal_result.json
-```
+~~~
 
-For a small smoke test, omit `--full-scale`. The full-scale benchmark
-needs substantial unified memory; the source matrix alone occupies about
-2 GiB. The generated feature distribution, feature bundling, missingness,
-and label relationships will differ from real application data, even when
-row count and feature count match. Its quality metrics measure only the
-generated task. Speed also depends on chip model, thermal conditions,
-background load, and OpenMP configuration.
+小规模冒烟测试省略 <code>--full-scale</code> 即可。完整规模需要较多统一内存；仅源码矩阵就约占 2 GiB。即使行数和特征数相同，生成数据的特征分布、特征捆绑、缺失模式和标签关系也会与真实应用不同。质量指标只对应这个生成任务。速度还取决于芯片型号、温度、后台负载和 OpenMP 配置。
 
-One Apple M5 run of the full-scale preset and the five validation cases are
-recorded in [the public benchmark reports](../benchmarks/metal/README.md).
+一台 Apple M5 的完整规模结果及五项验证结果见[公开基准报告](../benchmarks/metal/README.md)。
 
-This fork retains the upstream [MIT license](../LICENSE) and copyright
-notices; third-party submodules retain their own license files. Benchmark
-results should state the exact commit, hardware, configuration, run order,
-and whether data construction is included.
+本分支保留上游 [MIT 许可证](../LICENSE)及版权声明，第三方子模块保留各自许可文件。发布基准结果时，应同时说明确切提交、硬件、配置、运行顺序，以及是否计入数据构建时间。

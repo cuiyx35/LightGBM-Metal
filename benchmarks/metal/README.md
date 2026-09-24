@@ -1,47 +1,25 @@
-# Apple M5 synthetic benchmark
+# Apple M5 合成数据基准
 
-These reports were produced by the experimental Metal fork on an
-Apple M5 Mac with 32 GiB unified memory, connected to AC power. The Metal
-implementation used the source state represented by commit `7807af1` after
-the standalone history rewrite. Both runs used the Metal-enabled
-LightGBM 4.7.0 source checkout and the same preconstructed Dataset.
-After the benchmark, a fresh CMake configure and build directory succeeded
-with CMake 4.4.3 and Apple Clang 21; the five validation cases passed again
-against the rebuilt library.
+**简体中文** · [English](README.en.md) · [返回项目首页](../../README.md)
 
-| Report | Workload | Result |
+这些报告来自一台配备 **32 GiB 统一内存**、接通电源的 Apple M5 Mac，使用本仓库的实验性 Metal 后端。对应的独立仓库源码状态为提交 <code>7807af1</code>。CPU 和 Metal 测试使用同一份预先构建的 Dataset，以及启用 Metal 的 LightGBM 4.7.0 检出目录。基准完成后，还用 CMake 4.4.3 和 Apple Clang 21 在全新构建目录中重新配置、编译，并针对重建后的库再次通过五项验证。
+
+| 报告 | 工作负载 | 结果 |
 | --- | --- | --- |
-| [Scale benchmark](m5_synthetic_4m_500trees.json) | 3.3 million fit rows, 0.8 million held rows, 512 features, 500 trees, 6 CPU threads | CPU/Metal median fit ratio **1.55×** |
-| [Model-level validation](m5_validation.json) | Five small synthetic cases | All passed |
+| [完整规模基准](m5_synthetic_4m_500trees.json) | 330 万训练行、80 万留出行、512 个特征、500 棵树、6 个 CPU 线程 | CPU/Metal 训练时间中位数之比 **1.55 倍** |
+| [模型级验证](m5_validation.json) | 五项小规模合成数据测试 | 全部通过 |
 
-The large benchmark generated every feature and label from its fixed seed.
-It used 150 dense numeric and 362 rare binary features. After one-tree CPU
-and Metal warmups, the run order was Metal → CPU → CPU → Metal. Fit times in
-seconds were Metal **108.00 / 125.67** and CPU **178.93 / 183.50**. Median
-fit plus prediction was Metal **121.35** versus CPU **185.85** seconds,
-or **1.53×**. Generation and Dataset construction took **21.72** seconds
-once and were excluded from those per-backend times. Adding that same shared
-time to each backend gives an estimated full ratio of **1.45×**. The
-process peak RSS was **9.72 GiB**.
+完整规模测试按固定种子生成所有特征和标签，其中有 150 个稠密数值特征和 362 个稀有二元特征。CPU 和 Metal 分别进行一棵树的预热后，运行顺序是 **Metal → CPU → CPU → Metal**。训练耗时（秒）为 Metal **108.00 / 125.67**，CPU **178.93 / 183.50**。训练加预测的中位数为 Metal **121.35** 秒、CPU **185.85** 秒，比值为 **1.53 倍**。一次性数据生成和 Dataset 构建耗时 **21.72** 秒，不计入各后端单次耗时；若将同一份共用成本分别加入两个后端，估算整体比值为 **1.45 倍**。进程峰值 RSS 为 **9.72 GiB**。
 
-Repeated runs of each backend produced identical model and prediction hashes.
-The maximum Metal/CPU difference on held predictions was **1.86e-6**;
-AP differed by **2.07e-9** on these generated labels. This says nothing
-about the quality or prediction differences of application models. The
-synthetic data do not reproduce real feature distributions, missingness,
-categorical values, or label relationships. This is one chip, one seed, and
-two runs per backend; thermal conditions and background load can change
-timings. The validation case times are not a speed benchmark.
+每个后端重复运行得到的模型和预测哈希各自一致。在生成数据的留出预测上，Metal/CPU 最大差值为 **1.86e-6**，AP 差值为 **2.07e-9**。这些数字不能说明应用模型的质量或预测差异。生成数据没有再现真实的特征分布、缺失模式、类别值和标签关系。结果只有一个芯片、一个随机种子、每个后端两次运行；温度和后台负载可能改变耗时。模型级验证的耗时不是性能基准。
 
-To reproduce after building and selecting this fork's Python package and
-Metal-enabled native library:
+使用当前分支的 Python 包和启用 Metal 的原生库构建后，可按以下命令复现：
 
-```bash
+~~~bash
 python examples/python-guide/metal_validate.py \
   --output metal_validation.json
 python examples/python-guide/metal_synthetic_benchmark.py \
   --full-scale --output metal_synthetic_benchmark.json
-```
+~~~
 
-The scripts write only aggregate JSON and hashes. No external data files
-or row-level predictions are included here.
+脚本只写出汇总 JSON 和哈希；本目录不包含外部数据文件或逐行预测。
