@@ -10,16 +10,14 @@ Metal 路径为符合条件的特征组计算直方图。CPU 同时计算其他�
 
 ## 构建与使用
 
-需要 Apple Silicon macOS、支持 Metal 的 GPU、CMake、C++ 工具链，以及用于 CPU 并行训练的 OpenMP 运行时。Python 基准和验证脚本还需要 NumPy、pandas、scikit-learn。请按照本机工具链配置 OpenMP。典型源码构建步骤：
+需要 Apple Silicon macOS、支持 Metal 的 GPU、CMake、C++ 工具链，以及用于 CPU 并行训练的 OpenMP 运行时。Python 基准和验证脚本还需要 NumPy、SciPy、pandas、scikit-learn、narwhals。使用 Homebrew 的典型步骤：
 
 ~~~bash
-cmake -S . -B build-metal -DCMAKE_BUILD_TYPE=Release -DUSE_METAL=ON
-cmake --build build-metal -j2
-ln -sfn ../lib_lightgbm.dylib python-package/lib_lightgbm.dylib
-export PYTHONPATH="$PWD/python-package"
+brew install cmake libomp
+bash tools/build-metal-macos.sh --validate
 ~~~
 
-若 OpenMP 安装在非标准库路径，运行 Python 时还需把它的 <code>lib/</code> 目录加入 <code>DYLD_LIBRARY_PATH</code>。确认 Python 加载的是此检出目录中的包和启用 Metal 的 <code>lib_lightgbm.dylib</code>。训练参数示例：
+脚本接受 <code>OPENMP_PREFIX</code>、<code>PYTHON_BIN</code> 环境变量和 <code>--jobs N</code> 参数。若 OpenMP 安装在非标准库路径，运行 Python 时还需把它的 <code>lib/</code> 目录加入 <code>DYLD_LIBRARY_PATH</code>。确认 Python 加载的是此检出目录中的包和启用 Metal 的 <code>lib_lightgbm.dylib</code>。训练参数示例：
 
 ~~~python
 import lightgbm as lgb

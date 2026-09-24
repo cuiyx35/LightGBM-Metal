@@ -24,19 +24,16 @@ training. Test application quality separately before deploying a model.
 
 Building needs macOS, Apple Silicon, a Metal-capable GPU, CMake, a C++
 toolchain, and a working OpenMP runtime for parallel CPU training. The
-Python benchmark and validation scripts also need NumPy, pandas, and
-scikit-learn. Configure
-OpenMP as required by your local toolchain. A typical source build starts
-with:
+Python benchmark and validation scripts also need NumPy, SciPy, pandas,
+scikit-learn, and narwhals. With Homebrew, build and validate using:
 
 ```bash
-cmake -S . -B build-metal -DCMAKE_BUILD_TYPE=Release -DUSE_METAL=ON
-cmake --build build-metal -j2
-ln -sfn ../lib_lightgbm.dylib python-package/lib_lightgbm.dylib
-export PYTHONPATH="$PWD/python-package"
+brew install cmake libomp
+bash tools/build-metal-macos.sh --validate
 ```
 
-If OpenMP is installed outside standard library paths, also add its `lib/`
+The script accepts the `OPENMP_PREFIX` and `PYTHON_BIN` environment variables
+and a `--jobs N` argument. If OpenMP is installed outside standard library paths, also add its `lib/`
 directory to `DYLD_LIBRARY_PATH` for Python runs. Verify that Python loads
 the package and Metal-enabled `lib_lightgbm.dylib` from this checkout. For
 example:

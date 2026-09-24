@@ -1,0 +1,37 @@
+name: Metal macOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  metal-smoke:
+    name: Apple Silicon build and synthetic validation
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Install build dependencies
+        run: brew install cmake libomp
+      - name: Create Python environment
+        run: |
+          python3 -m venv "$RUNNER_TEMP/metal-venv"
+          "$RUNNER_TEMP/metal-venv/bin/python" -m pip install --disable-pip-version-check \
+            numpy scipy pandas scikit-learn narwhals
+      - name: Build and validate Metal
+        env:
+          PYTHON_BIN: ${{ runner.temp }}/metal-venv/bin/python
+        run: bash tools/build-metal-macos.sh --validate --jobs 2

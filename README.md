@@ -18,18 +18,22 @@
 
 ## 构建和快速验证
 
-在本仓库根目录执行；按本机工具链配置 OpenMP：
+在本仓库根目录执行。先安装 CMake 和 OpenMP 运行时，并为验证准备 NumPy、SciPy、pandas、scikit-learn、narwhals。使用 Homebrew 时，构建脚本会自动找到 <code>libomp</code>：
 
 ~~~bash
-cmake -S . -B build-metal -DCMAKE_BUILD_TYPE=Release -DUSE_METAL=ON
-cmake --build build-metal -j2
-ln -sfn ../lib_lightgbm.dylib python-package/lib_lightgbm.dylib
-export PYTHONPATH="$PWD/python-package"
-python examples/python-guide/metal_validate.py --output metal_validation.json
-python examples/python-guide/metal_synthetic_benchmark.py --output metal_quick_benchmark.json
+brew install cmake libomp
+bash tools/build-metal-macos.sh --validate
 ~~~
 
-确认 Python 导入的是此仓库的 <code>lightgbm</code> 和启用 Metal 的 <code>lib_lightgbm.dylib</code>。验证脚本用生成数据检查五类模型级情形，结果写入 JSON；失败时退出码非零。基准脚本默认运行小规模冒烟测试。使用 Metal 训练时设置 <code>device_type="metal"</code>；返回 CPU 路径设置 <code>device_type="cpu"</code>。
+脚本在 <code>build-metal/</code> 中构建，将原生库链接到本仓库的 Python 包；<code>--validate</code> 用生成数据检查五类模型级情形，将 JSON 写入 <code>build-metal/metal_validation.json</code>，失败时退出码非零。若 OpenMP 安装在其他位置，可设置 <code>OPENMP_PREFIX</code>；使用不同 Python 可设置 <code>PYTHON_BIN</code>。<code>bash tools/build-metal-macos.sh --help</code> 列出全部参数。GitHub Actions 的 [Metal macOS 检查](.github/workflows/metal_macos.yml)使用同一脚本在 Apple Silicon 托管运行器上构建并验证；它不运行性能基准。
+
+如需单独做小规模性能冒烟测试，先构建，然后执行：
+
+~~~bash
+PYTHONPATH="$PWD/python-package" python3 examples/python-guide/metal_synthetic_benchmark.py --output metal_quick_benchmark.json
+~~~
+
+使用 Metal 训练时设置 <code>device_type="metal"</code>；返回 CPU 路径设置 <code>device_type="cpu"</code>。
 
 ## 公开测试结果
 

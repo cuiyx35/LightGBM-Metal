@@ -18,18 +18,22 @@ See the [experimental user notes](docs/Metal-Experimental.en.md) for architectur
 
 ## Build and quick validation
 
-Run these commands from the repository root, configuring OpenMP for your toolchain:
+Run from the repository root. Install CMake and an OpenMP runtime, plus NumPy, SciPy, pandas, scikit-learn, and narwhals for validation. With Homebrew, the script finds <code>libomp</code> automatically:
 
 ~~~bash
-cmake -S . -B build-metal -DCMAKE_BUILD_TYPE=Release -DUSE_METAL=ON
-cmake --build build-metal -j2
-ln -sfn ../lib_lightgbm.dylib python-package/lib_lightgbm.dylib
-export PYTHONPATH="$PWD/python-package"
-python examples/python-guide/metal_validate.py --output metal_validation.json
-python examples/python-guide/metal_synthetic_benchmark.py --output metal_quick_benchmark.json
+brew install cmake libomp
+bash tools/build-metal-macos.sh --validate
 ~~~
 
-Verify that Python imports <code>lightgbm</code> and the Metal-enabled <code>lib_lightgbm.dylib</code> from this checkout. The validator uses generated data for five model-level cases, writes JSON, and exits nonzero on failure. The benchmark defaults to a small smoke test. Set <code>device_type="metal"</code> to train with Metal, or <code>device_type="cpu"</code> for the CPU path.
+The script builds in <code>build-metal/</code> and links the native library into this checkout's Python package. <code>--validate</code> checks five model-level cases using generated data, writes <code>build-metal/metal_validation.json</code>, and exits nonzero on failure. Set <code>OPENMP_PREFIX</code> for a non-Homebrew OpenMP installation or <code>PYTHON_BIN</code> for another Python. Run <code>bash tools/build-metal-macos.sh --help</code> for all options. The [Metal macOS GitHub Actions check](.github/workflows/metal_macos.yml) uses the same script on an Apple Silicon hosted runner; it does not run a performance benchmark.
+
+For a separate small performance smoke test after building:
+
+~~~bash
+PYTHONPATH="$PWD/python-package" python3 examples/python-guide/metal_synthetic_benchmark.py --output metal_quick_benchmark.json
+~~~
+
+Set <code>device_type="metal"</code> to train with Metal, or <code>device_type="cpu"</code> for the CPU path.
 
 ## Public benchmark
 

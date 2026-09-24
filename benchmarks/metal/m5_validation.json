@@ -1,89 +1,89 @@
 {
-  "scope": "synthetic_model_level_correctness_only",
-  "machine": "arm64",
-  "library_sha256": "9b0b609e528b3f5683f25e545b111fe93130794baf1942b5b97b37415f5df389",
-  "cases": [
-    {
-      "case": "dense_numeric",
-      "status": "PASS",
-      "train_rows": 12000,
-      "rounds": 30,
-      "cpu": {
-        "fit_seconds_observational": 0.019572,
-        "metric": 0.9713482781225999,
-        "trees": 30
-      },
-      "metal": {
-        "fit_seconds_observational": 0.148861,
-        "metric": 0.9713482781225999,
-        "trees": 30
-      },
-      "max_prediction_difference": 7.008188740442733e-08,
-      "mean_prediction_difference": 6.3983553912575624e-09
-    },
-    {
-      "case": "mixed_missing_category_sparse_bagging",
-      "status": "PASS",
-      "train_rows": 12000,
-      "rounds": 20,
-      "cpu": {
-        "fit_seconds_observational": 0.018477,
-        "metric": 0.9859661636337218,
-        "trees": 20
-      },
-      "metal": {
-        "fit_seconds_observational": 0.075514,
-        "metric": 0.9859661636337218,
-        "trees": 20
-      },
-      "max_prediction_difference": 7.253080591684835e-08,
-      "mean_prediction_difference": 6.089728287635848e-09
-    },
-    {
-      "case": "multiple_histogram_shards",
-      "status": "PASS",
-      "train_rows": 100000,
-      "rounds": 10,
-      "cpu": {
-        "fit_seconds_observational": 0.021888,
-        "metric": 0.9749923848876705,
-        "trees": 10
-      },
-      "metal": {
-        "fit_seconds_observational": 0.067362,
-        "metric": 0.9749923848876705,
-        "trees": 10
-      },
-      "max_prediction_difference": 6.945704145167042e-08,
-      "mean_prediction_difference": 8.56082229784283e-09
-    },
-    {
-      "case": "constant_hessian_cpu_fallback",
-      "status": "PASS",
-      "train_rows": 6000,
-      "rounds": 10,
-      "cpu": {
-        "fit_seconds_observational": 0.004911,
-        "metric": 0.35451448776251543,
-        "trees": 10
-      },
-      "metal": {
-        "fit_seconds_observational": 0.005297,
-        "metric": 0.35451448776251543,
-        "trees": 10
-      },
-      "max_prediction_difference": 0.0,
-      "mean_prediction_difference": 0.0
-    },
-    {
-      "case": "cpu_gpu_overlap",
-      "status": "PASS",
-      "train_rows": 8000,
-      "rounds": 20,
-      "model_text_equal": true,
-      "max_prediction_difference": 0.0
-    }
-  ],
-  "status": "PASS",
-  "note": "Case times are observational, not a speed benchmark."
+    "scope": "synthetic_model_level_correctness_only",
+    "machine": "arm64",
+    "library_sha256": "9b0b609e528b3f5683f25e545b111fe93130794baf1942b5b97b37415f5df389",
+    "cases": [
+        {
+            "case": "dense_numeric",
+            "status": "PASS",
+            "train_rows": 12000,
+            "rounds": 30,
+            "cpu": {
+                "fit_seconds_observational": 0.019572,
+                "metric": 0.9713482781225999,
+                "trees": 30
+            },
+            "metal": {
+                "fit_seconds_observational": 0.148861,
+                "metric": 0.9713482781225999,
+                "trees": 30
+            },
+            "max_prediction_difference": 7.008188740442733e-8,
+            "mean_prediction_difference": 6.3983553912575624e-9
+        },
+        {
+            "case": "mixed_missing_category_sparse_bagging",
+            "status": "PASS",
+            "train_rows": 12000,
+            "rounds": 20,
+            "cpu": {
+                "fit_seconds_observational": 0.018477,
+                "metric": 0.9859661636337218,
+                "trees": 20
+            },
+            "metal": {
+                "fit_seconds_observational": 0.075514,
+                "metric": 0.9859661636337218,
+                "trees": 20
+            },
+            "max_prediction_difference": 7.253080591684835e-8,
+            "mean_prediction_difference": 6.089728287635848e-9
+        },
+        {
+            "case": "multiple_histogram_shards",
+            "status": "PASS",
+            "train_rows": 100000,
+            "rounds": 10,
+            "cpu": {
+                "fit_seconds_observational": 0.021888,
+                "metric": 0.9749923848876705,
+                "trees": 10
+            },
+            "metal": {
+                "fit_seconds_observational": 0.067362,
+                "metric": 0.9749923848876705,
+                "trees": 10
+            },
+            "max_prediction_difference": 6.945704145167042e-8,
+            "mean_prediction_difference": 8.56082229784283e-9
+        },
+        {
+            "case": "constant_hessian_cpu_fallback",
+            "status": "PASS",
+            "train_rows": 6000,
+            "rounds": 10,
+            "cpu": {
+                "fit_seconds_observational": 0.004911,
+                "metric": 0.35451448776251543,
+                "trees": 10
+            },
+            "metal": {
+                "fit_seconds_observational": 0.005297,
+                "metric": 0.35451448776251543,
+                "trees": 10
+            },
+            "max_prediction_difference": 0.0,
+            "mean_prediction_difference": 0.0
+        },
+        {
+            "case": "cpu_gpu_overlap",
+            "status": "PASS",
+            "train_rows": 8000,
+            "rounds": 20,
+            "model_text_equal": true,
+            "max_prediction_difference": 0.0
+        }
+    ],
+    "status": "PASS",
+    "note": "Case times are observational, not a speed benchmark."
 }

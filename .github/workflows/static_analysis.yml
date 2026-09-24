@@ -98,6 +98,8 @@ jobs:
           )
           if [[ ${num_doc_files_changed} -gt 0 ]]; then
               echo "Some R documentation files have changed. Please re-generate them and commit those changes."
+              git diff --stat -- R-package/man R-package/NAMESPACE
+              git diff -- R-package/man R-package/NAMESPACE
               echo ""
               echo "    sh build-cran-package.sh"
               echo "    R CMD INSTALL --with-keep.source lightgbm_*.tar.gz"
