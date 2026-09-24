@@ -123,6 +123,16 @@ class MetalHistogramEngine {
       }
       rows_per_chunk_ = static_cast<uint32_t>(parsed);
     }
+    const char* verify_group = std::getenv("LGBM_METAL_VERIFY_QUANTIZED_GROUP");
+    if (verify_group != nullptr) {
+      char* end = nullptr;
+      const long parsed = std::strtol(verify_group, &end, 10);
+      if (*verify_group == '\0' || *end != '\0' || parsed < 0 ||
+          parsed > std::numeric_limits<int>::max()) {
+        Log::Fatal("LGBM_METAL_VERIFY_QUANTIZED_GROUP must be a non-negative group id");
+      }
+      verify_quantized_group_ = static_cast<int>(parsed);
+    }
     const auto setup_start = ProfileClock::now();
     device_ = MTLCreateSystemDefaultDevice();
     if (!device_) {
@@ -270,6 +280,7 @@ class MetalHistogramEngine {
     if (inflight_command_) Log::Fatal("Metal histogram build is already in flight");
     const auto preparation_start = ProfileClock::now();
     inflight_shards_ = (uint64_t(selected_rows) + kRowsPerShard - 1) / kRowsPerShard;
+    inflight_selected_rows_ = static_cast<uint32_t>(selected_rows);
     auto* gpu_indices = static_cast<uint32_t*>([indices_ contents]);
     for (data_size_t row = 0; row < selected_rows; ++row) {
       gpu_indices[row] = row_indices ? static_cast<uint32_t>(row_indices[row]) : static_cast<uint32_t>(row);
@@ -324,6 +335,53 @@ class MetalHistogramEngine {
     inflight_command_ = nil;
     const auto* gpu_gradient = static_cast<const int64_t*>([output_gradient_ contents]);
     const auto* gpu_hessian = static_cast<const int64_t*>([output_hessian_ contents]);
+    if (verify_quantized_group_ >= 0 && !verified_quantized_group_) {
+      for (uint32_t slot = 0; slot < groups_; ++slot) {
+        if (!group_mask[slot] || groups[slot] != verify_quantized_group_) continue;
+        std::vector<int64_t> expected_gradient(kBins, 0);
+        std::vector<int64_t> expected_hessian(kBins, 0);
+        const auto* matrix = static_cast<const uint8_t*>([matrix_ contents]);
+        const auto* gradients = static_cast<const float*>([gradient_ contents]);
+        const auto* hessians = static_cast<const float*>([hessian_ contents]);
+        const auto* indices = static_cast<const uint32_t*>([indices_ contents]);
+        for (uint32_t selected = 0; selected < inflight_selected_rows_; ++selected) {
+          const uint32_t row = indices[selected];
+          const uint32_t bin = matrix[uint64_t(slot) * rows_ + row];
+          expected_gradient[bin] += static_cast<int32_t>(
+              std::nearbyint(gradients[row] * gradient_scale_));
+          expected_hessian[bin] += static_cast<int32_t>(
+              std::nearbyint(hessians[row] * hessian_scale_));
+        }
+        uint64_t max_gradient_units = 0;
+        uint64_t max_hessian_units = 0;
+        uint32_t mismatched_gradient_bins = 0;
+        uint32_t mismatched_hessian_bins = 0;
+        for (uint32_t bin = 0; bin < kBins; ++bin) {
+          int64_t observed_gradient = 0;
+          int64_t observed_hessian = 0;
+          for (uint32_t shard = 0; shard < inflight_shards_; ++shard) {
+            const uint64_t offset = (uint64_t(shard) * groups_ + slot) * kBins + bin;
+            observed_gradient += gpu_gradient[offset];
+            observed_hessian += gpu_hessian[offset];
+          }
+          const uint64_t gradient_units = static_cast<uint64_t>(
+              std::llabs(observed_gradient - expected_gradient[bin]));
+          const uint64_t hessian_units = static_cast<uint64_t>(
+              std::llabs(observed_hessian - expected_hessian[bin]));
+          max_gradient_units = std::max(max_gradient_units, gradient_units);
+          max_hessian_units = std::max(max_hessian_units, hessian_units);
+          mismatched_gradient_bins += gradient_units != 0;
+          mismatched_hessian_bins += hessian_units != 0;
+        }
+        Log::Info("Metal quantized verification group=%d rows=%u gradient_scale=%.9g hessian_scale=%.9g max_gradient_integer_difference=%llu max_hessian_integer_difference=%llu mismatched_gradient_bins=%u mismatched_hessian_bins=%u",
+                  verify_quantized_group_, inflight_selected_rows_, gradient_scale_,
+                  hessian_scale_, static_cast<unsigned long long>(max_gradient_units),
+                  static_cast<unsigned long long>(max_hessian_units),
+                  mismatched_gradient_bins, mismatched_hessian_bins);
+        verified_quantized_group_ = true;
+        break;
+      }
+    }
     const auto merge_start = ProfileClock::now();
     for (uint32_t feature = 0; feature < groups_; ++feature) {
       if (!group_mask[feature]) continue;
@@ -362,6 +420,7 @@ class MetalHistogramEngine {
   __strong id<MTLBuffer> output_hessian_ = nil;
   __strong id<MTLCommandBuffer> inflight_command_ = nil;
   uint32_t inflight_shards_ = 0;
+  uint32_t inflight_selected_rows_ = 0;
   ProfileClock::time_point inflight_start_{};
   uint32_t rows_ = 0;
   uint32_t groups_ = 0;
@@ -369,6 +428,8 @@ class MetalHistogramEngine {
   float gradient_scale_ = 0.0f;
   float hessian_scale_ = 0.0f;
   uint32_t rows_per_chunk_ = kDefaultRowsPerChunk;
+  int verify_quantized_group_ = -1;
+  bool verified_quantized_group_ = false;
   bool profile_enabled_ = false;
   uint64_t buffer_bytes_ = 0;
   uint64_t dispatches_ = 0;
