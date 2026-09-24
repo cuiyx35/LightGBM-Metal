@@ -26,7 +26,7 @@ namespace LightGBM {
 namespace {
 
 constexpr uint32_t kBins = 256;
-constexpr uint32_t kDefaultRowsPerShard = 16384;
+constexpr uint32_t kDefaultRowsPerShard = 32768;
 constexpr uint32_t kDefaultRowsPerChunk = 256;
 
 struct MetalParams {
