@@ -3,6 +3,9 @@
 This branch is an independent research fork of LightGBM 4.7.0. It adds
 `device_type="metal"` for macOS on Apple Silicon. It is not an official
 LightGBM release, and it has not been validated across M-series models.
+For architecture and contributor workflow, read the
+[Metal development guide](Metal-Development.md). Coding agents can also use
+the repository [AGENTS.md](../AGENTS.md).
 
 The Metal path calculates histograms for eligible feature groups. The CPU
 calculates the other groups at the same time, then performs split search and
@@ -24,10 +27,14 @@ with:
 ```bash
 cmake -S . -B build-metal -DCMAKE_BUILD_TYPE=Release -DUSE_METAL=ON
 cmake --build build-metal -j2
+ln -sfn ../lib_lightgbm.dylib python-package/lib_lightgbm.dylib
+export PYTHONPATH="$PWD/python-package"
 ```
 
-Build or install the Python package from this checkout, and verify that it
-loads the Metal-enabled `lib_lightgbm.dylib`. For example:
+If OpenMP is installed outside standard library paths, also add its `lib/`
+directory to `DYLD_LIBRARY_PATH` for Python runs. Verify that Python loads
+the package and Metal-enabled `lib_lightgbm.dylib` from this checkout. For
+example:
 
 ```python
 import lightgbm as lgb
@@ -43,9 +50,10 @@ serialization use the usual LightGBM interfaces.
 ## Scriptable validation
 
 [`examples/python-guide/metal_validate.py`](../examples/python-guide/metal_validate.py)
-runs four synthetic model-level cases: dense numeric, mixed missing/category/
-sparse features with bagging, multiple histogram shards, and a constant
-Hessian CPU fallback. It checks CPU/Metal predictions and model reload,
+runs five synthetic model-level cases: dense numeric, mixed missing/category/
+sparse features with bagging, multiple histogram shards, a constant
+Hessian CPU fallback, and CPU/GPU overlap versus serial execution. It checks
+CPU/Metal predictions, overlap, and model reload,
 then writes a JSON report. A failed check exits nonzero and writes
 `"status": "FAIL"`. This is a smoke test, not a rule requiring application
 models to reproduce CPU predictions exactly.
@@ -84,7 +92,7 @@ row count and feature count match. Its quality metrics measure only the
 generated task. Speed also depends on chip model, thermal conditions,
 background load, and OpenMP configuration.
 
-One Apple M5 run of the full-scale preset and the four validation cases are
+One Apple M5 run of the full-scale preset and the five validation cases are
 recorded in [the public benchmark reports](../benchmarks/metal/README.md).
 
 This fork retains the upstream [MIT license](../LICENSE) and copyright

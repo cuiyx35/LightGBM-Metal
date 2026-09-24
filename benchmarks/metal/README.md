@@ -5,13 +5,13 @@ Apple M5 Mac with 32 GiB unified memory, connected to AC power. The Metal
 implementation was at commit `885c799`. Both runs used the Metal-enabled
 LightGBM 4.7.0 source checkout and the same preconstructed Dataset.
 After the benchmark, a fresh CMake configure and build directory succeeded
-with CMake 4.4.3 and Apple Clang 21; the four validation cases passed again
+with CMake 4.4.3 and Apple Clang 21; the five validation cases passed again
 against the rebuilt library.
 
 | Report | Workload | Result |
 | --- | --- | --- |
 | [Scale benchmark](m5_synthetic_4m_500trees.json) | 3.3 million fit rows, 0.8 million held rows, 512 features, 500 trees, 6 CPU threads | CPU/Metal median fit ratio **1.55×** |
-| [Model-level validation](m5_validation.json) | Four small synthetic cases | All passed |
+| [Model-level validation](m5_validation.json) | Five small synthetic cases | All passed |
 
 The large benchmark generated every feature and label from its fixed seed.
 It used 150 dense numeric and 362 rare binary features. After one-tree CPU

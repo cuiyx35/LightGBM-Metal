@@ -9,12 +9,12 @@
       "train_rows": 12000,
       "rounds": 30,
       "cpu": {
-        "fit_seconds_observational": 0.019354,
+        "fit_seconds_observational": 0.019572,
         "metric": 0.9713482781225999,
         "trees": 30
       },
       "metal": {
-        "fit_seconds_observational": 0.147006,
+        "fit_seconds_observational": 0.148861,
         "metric": 0.9713482781225999,
         "trees": 30
       },
@@ -27,12 +27,12 @@
       "train_rows": 12000,
       "rounds": 20,
       "cpu": {
-        "fit_seconds_observational": 0.016302,
+        "fit_seconds_observational": 0.018477,
         "metric": 0.9859661636337218,
         "trees": 20
       },
       "metal": {
-        "fit_seconds_observational": 0.080573,
+        "fit_seconds_observational": 0.075514,
         "metric": 0.9859661636337218,
         "trees": 20
       },
@@ -45,12 +45,12 @@
       "train_rows": 100000,
       "rounds": 10,
       "cpu": {
-        "fit_seconds_observational": 0.021749,
+        "fit_seconds_observational": 0.021888,
         "metric": 0.9749923848876705,
         "trees": 10
       },
       "metal": {
-        "fit_seconds_observational": 0.068981,
+        "fit_seconds_observational": 0.067362,
         "metric": 0.9749923848876705,
         "trees": 10
       },
@@ -63,17 +63,25 @@
       "train_rows": 6000,
       "rounds": 10,
       "cpu": {
-        "fit_seconds_observational": 0.004855,
+        "fit_seconds_observational": 0.004911,
         "metric": 0.35451448776251543,
         "trees": 10
       },
       "metal": {
-        "fit_seconds_observational": 0.005323,
+        "fit_seconds_observational": 0.005297,
         "metric": 0.35451448776251543,
         "trees": 10
       },
       "max_prediction_difference": 0.0,
       "mean_prediction_difference": 0.0
+    },
+    {
+      "case": "cpu_gpu_overlap",
+      "status": "PASS",
+      "train_rows": 8000,
+      "rounds": 20,
+      "model_text_equal": true,
+      "max_prediction_difference": 0.0
     }
   ],
   "status": "PASS",

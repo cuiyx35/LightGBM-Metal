@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import platform
 import tempfile
 import time
@@ -75,6 +76,45 @@ def compare(name: str, x_train, y_train, x_held, y_held, *, rounds: int,
     return result
 
 
+def compare_overlap() -> dict:
+    """Check that concurrent and serialized CPU/GPU work produce one model."""
+    rng = np.random.default_rng(119)
+    x = rng.normal(size=(10_000, 24)).astype(np.float32)
+    x[:, 16:] *= (rng.random((10_000, 8)) < 0.06)
+    y = (x[:, 0] + 0.7 * x[:, 1] * x[:, 2] +
+         0.3 * x[:, 16] > 0).astype(np.int8)
+    dataset = lgb.Dataset(x[:8_000], label=y[:8_000], free_raw_data=False,
+                          params={"max_bin": 63})
+    dataset.construct()
+    params = {
+        "objective": "binary", "metric": "binary_logloss", "verbosity": 1,
+        "device_type": "metal", "num_threads": 2, "num_leaves": 15,
+        "min_data_in_leaf": 30, "max_bin": 63, "seed": 20260923,
+        "force_col_wise": True, "feature_fraction": 0.8,
+    }
+    variable = "LGBM_METAL_DISABLE_OVERLAP"
+    original = os.environ.pop(variable, None)
+    try:
+        overlapping = lgb.train(params, dataset, num_boost_round=20)
+        os.environ[variable] = "1"
+        serial = lgb.train(params, dataset, num_boost_round=20)
+    finally:
+        if original is None:
+            os.environ.pop(variable, None)
+        else:
+            os.environ[variable] = original
+    model_equal = overlapping.model_to_string() == serial.model_to_string()
+    difference = float(np.max(np.abs(overlapping.predict(x[8_000:]) -
+                                     serial.predict(x[8_000:]))))
+    if not model_equal or difference > 1e-12:
+        raise AssertionError(f"overlap changed model or predictions: {difference}")
+    result = {"case": "cpu_gpu_overlap", "status": "PASS", "train_rows": 8_000,
+              "rounds": 20, "model_text_equal": model_equal,
+              "max_prediction_difference": difference}
+    print("CASE " + json.dumps(result), flush=True)
+    return result
+
+
 def run_cases() -> list[dict]:
     cases = []
     rng = np.random.default_rng(321)
@@ -116,6 +156,7 @@ def run_cases() -> list[dict]:
     cases.append(compare("constant_hessian_cpu_fallback", x[:6_000], y[:6_000],
                          x[6_000:], y[6_000:], rounds=10,
                          objective="regression"))
+    cases.append(compare_overlap())
     return cases
 
 

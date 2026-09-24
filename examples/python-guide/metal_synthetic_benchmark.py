@@ -99,8 +99,13 @@ def main() -> None:
             args.threads < 1 or not 0 < args.positive_rate < 0.5):
         parser.error("Invalid workload dimensions or class prevalence")
     for key in ("LGBM_METAL_PROFILE", "LGBM_METAL_FORCE_CPU",
-                "LGBM_METAL_DISABLE_OVERLAP", "LGBM_METAL_COMPARE_HIST"):
-        if os.getenv(key):
+                "LGBM_METAL_DISABLE_OVERLAP", "LGBM_METAL_COMPARE_HIST",
+                "LGBM_METAL_VERIFY_QUANTIZED_GROUP",
+                "LGBM_METAL_VERIFY_QUANTIZED_DISPATCH",
+                "LGBM_METAL_THREADS_PER_GROUP", "LGBM_METAL_ROWS_PER_SHARD",
+                "LGBM_METAL_ROWS_PER_CHUNK", "LGBM_METAL_COMPACT_GROUPS",
+                "LGBM_METAL_MIN_LEAF_ROWS"):
+        if key in os.environ:
             parser.error(f"Unset diagnostic/override variable {key}")
 
     check_idle()

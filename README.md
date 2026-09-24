@@ -3,7 +3,8 @@
 > [!IMPORTANT]
 > The `apple-metal-experiment` branch is an independent experimental fork,
 > not an official LightGBM release. Its Apple Silicon Metal training path is
-> described in [Metal experimental notes](docs/Metal-Experimental.md).
+> described in [Metal experimental notes](docs/Metal-Experimental.md) and
+> [the development guide](docs/Metal-Development.md).
 > Upstream badges below report upstream CI, not validation of this branch.
 
 > [!NOTE]
