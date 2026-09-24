@@ -1,8 +1,11 @@
 # Experimental Metal training on Apple Silicon
 
-This branch is an independent research fork of LightGBM 4.7.0. It adds
+This repository is an independent research fork of LightGBM 4.7.0. It adds
 `device_type="metal"` for macOS on Apple Silicon. It is not an official
 LightGBM release, and it has not been validated across M-series models.
+The standalone repository history starts with a source snapshot of upstream
+commit [`8f7036f`](https://github.com/lightgbm-org/LightGBM/commit/8f7036f03627054d5a54a6f965b13f4b9ff2cb63);
+earlier LightGBM history remains in the official repository.
 For architecture and contributor workflow, read the
 [Metal development guide](Metal-Development.md). Coding agents can also use
 the repository [AGENTS.md](../AGENTS.md).
