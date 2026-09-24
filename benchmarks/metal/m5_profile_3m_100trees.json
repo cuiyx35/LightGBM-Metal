@@ -1,44 +1,44 @@
 {
-  "status": "DIAGNOSTIC_ONLY",
-  "data": "fully generated locally; no external files",
-  "hardware": "Apple M5, 32 GiB unified memory",
-  "configuration": {
-    "seed": 20260924,
-    "train_rows": 3300000,
-    "held_rows": 200000,
-    "features": 512,
-    "dense_features": 150,
-    "rare_binary_features": 362,
-    "rounds": 100,
-    "threads": 6,
-    "max_bin": 127,
-    "num_leaves": 63,
-    "device_type": "metal",
-    "LGBM_METAL_PROFILE": 1
-  },
-  "times_seconds": {
-    "generation": 15.796188000007533,
-    "dataset_construction": 3.784683125006268,
-    "fit_wall_clock": 21.710591500013834,
-    "learner_train": 19.583143,
-    "gpu_command_inflight": 16.141420,
-    "cpu_wait_for_gpu": 12.919801,
-    "cpu_histogram": 3.218915,
-    "data_mirror": 0.615885,
-    "gradient_preparation": 0.297150,
-    "histogram_preparation": 0.431133,
-    "histogram_merge": 0.746033,
-    "split_search": 0.486461,
-    "predict": 0.2299377080053091
-  },
-  "metal_dispatches": 6200,
-  "eligible_single_feature_groups": 150,
-  "model_sha256": "bfc0b19259103cf63c808c007d4e3335c10fcace999b8143d32cf1496132db18",
-  "prediction_sha256": "19a5c9dfbd1e18b0a2455641f1e5959d537fd54a15c60a53a01db4a60a5ce0c8",
-  "limitations": [
-    "One run on one chip; this is a bottleneck diagnostic, not a speed benchmark.",
-    "GPU command time overlaps CPU histogram time; CPU GPU-wait time falls within GPU command time. Stage totals must not be added.",
-    "Profiling and logging may affect elapsed training time.",
-    "Generated data do not represent application feature distributions or model quality."
-  ]
+    "status": "DIAGNOSTIC_ONLY",
+    "data": "fully generated locally; no external files",
+    "hardware": "Apple M5, 32 GiB unified memory",
+    "configuration": {
+        "seed": 20260924,
+        "train_rows": 3300000,
+        "held_rows": 200000,
+        "features": 512,
+        "dense_features": 150,
+        "rare_binary_features": 362,
+        "rounds": 100,
+        "threads": 6,
+        "max_bin": 127,
+        "num_leaves": 63,
+        "device_type": "metal",
+        "LGBM_METAL_PROFILE": 1
+    },
+    "times_seconds": {
+        "generation": 15.796188000007533,
+        "dataset_construction": 3.784683125006268,
+        "fit_wall_clock": 21.710591500013834,
+        "learner_train": 19.583143,
+        "gpu_command_inflight": 16.14142,
+        "cpu_wait_for_gpu": 12.919801,
+        "cpu_histogram": 3.218915,
+        "data_mirror": 0.615885,
+        "gradient_preparation": 0.29715,
+        "histogram_preparation": 0.431133,
+        "histogram_merge": 0.746033,
+        "split_search": 0.486461,
+        "predict": 0.2299377080053091
+    },
+    "metal_dispatches": 6200,
+    "eligible_single_feature_groups": 150,
+    "model_sha256": "bfc0b19259103cf63c808c007d4e3335c10fcace999b8143d32cf1496132db18",
+    "prediction_sha256": "19a5c9dfbd1e18b0a2455641f1e5959d537fd54a15c60a53a01db4a60a5ce0c8",
+    "limitations": [
+        "One run on one chip; this is a bottleneck diagnostic, not a speed benchmark.",
+        "GPU command time overlaps CPU histogram time; CPU GPU-wait time falls within GPU command time. Stage totals must not be added.",
+        "Profiling and logging may affect elapsed training time.",
+        "Generated data do not represent application feature distributions or model quality."
+    ]
 }
