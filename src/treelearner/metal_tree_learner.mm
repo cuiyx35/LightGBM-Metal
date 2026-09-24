@@ -596,9 +596,35 @@ MetalTreeLearner::MetalTreeLearner(const Config* config)
 
 MetalTreeLearner::~MetalTreeLearner() {
   if (profile_enabled_) {
-    Log::Info("Metal learner profile: cpu_hist=%.6fs cpu_hist_calls=%llu",
+    Log::Info("Metal learner profile: train=%.6fs train_calls=%llu split_search=%.6fs split_search_calls=%llu cpu_hist=%.6fs cpu_hist_calls=%llu",
+              train_seconds_, static_cast<unsigned long long>(train_calls_),
+              split_search_seconds_, static_cast<unsigned long long>(split_search_calls_),
               cpu_hist_seconds_, static_cast<unsigned long long>(cpu_hist_calls_));
   }
+}
+
+Tree* MetalTreeLearner::Train(const score_t* gradients, const score_t* hessians,
+                              bool is_first_tree) {
+  if (!profile_enabled_) {
+    return SerialTreeLearner::Train(gradients, hessians, is_first_tree);
+  }
+  const auto start = ProfileClock::now();
+  Tree* tree = SerialTreeLearner::Train(gradients, hessians, is_first_tree);
+  train_seconds_ += SecondsSince(start);
+  ++train_calls_;
+  return tree;
+}
+
+void MetalTreeLearner::FindBestSplitsFromHistograms(
+    const std::vector<int8_t>& is_feature_used, bool use_subtract, const Tree* tree) {
+  if (!profile_enabled_) {
+    SerialTreeLearner::FindBestSplitsFromHistograms(is_feature_used, use_subtract, tree);
+    return;
+  }
+  const auto start = ProfileClock::now();
+  SerialTreeLearner::FindBestSplitsFromHistograms(is_feature_used, use_subtract, tree);
+  split_search_seconds_ += SecondsSince(start);
+  ++split_search_calls_;
 }
 
 void MetalTreeLearner::Init(const Dataset* train_data, bool is_constant_hessian) {

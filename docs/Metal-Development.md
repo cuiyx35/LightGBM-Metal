@@ -58,7 +58,7 @@ PYTHONPATH="$PWD/python-package" python3 examples/python-guide/metal_synthetic_b
 
 | 环境变量 | 用途 |
 | --- | --- |
-| <code>LGBM_METAL_PROFILE=1</code> | 记录 GPU inflight/等待、CPU 直方图、准备、合并与 dispatch 耗时 |
+| <code>LGBM_METAL_PROFILE=1</code> | 记录学习器训练、分裂搜索、GPU inflight/等待、CPU 直方图、数据镜像、准备、合并与 dispatch 耗时 |
 | <code>LGBM_METAL_DISABLE_OVERLAP=1</code> | 串行执行 Metal 与 CPU 直方图计算，用于对照 |
 | <code>LGBM_METAL_FORCE_CPU=1</code> | 在 Metal 学习器中强制使用 CPU 直方图，便于诊断 |
 | <code>LGBM_METAL_COMPARE_HIST=1</code> | 将一个 GPU 直方图与 CPU 计算结果对照 |
@@ -71,6 +71,7 @@ PYTHONPATH="$PWD/python-package" python3 examples/python-guide/metal_synthetic_b
 | <code>LGBM_METAL_MIN_LEAF_ROWS=N</code> | 探索叶节点行数低于阈值时转 CPU |
 
 这些开关可能改变结果和耗时。公开基准会拒绝诊断覆盖项，使主报告速度比使用正常路径。profiling 应单独运行，并明确标注为诊断任务。
+<code>train</code> 计量树学习器内部的训练时间，不含 Python 数据生成、Dataset 构建与预测。<code>gpu_inflight</code> 和 <code>cpu_hist</code> 可同时进行；<code>gpu_wait</code> 是 CPU 等待 GPU 完成的时间，包含在 GPU 命令在途区间中。这些累计值不能相加为端到端耗时。各阶段计时与日志本身也可能影响性能，判断提速应使用关闭 profiling 的交错基准。
 
 ## 公开发布与可移植性
 

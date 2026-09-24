@@ -95,7 +95,7 @@ their keys, update examples and documentation together.
 
 | Environment variable | Purpose |
 | --- | --- |
-| `LGBM_METAL_PROFILE=1` | Log GPU inflight/wait, CPU histogram, setup, merge, and dispatch totals |
+| `LGBM_METAL_PROFILE=1` | Log learner training, split search, GPU inflight/wait, CPU histogram, data mirror, setup, merge, and dispatch totals |
 | `LGBM_METAL_DISABLE_OVERLAP=1` | Run Metal and CPU histogram work serially for a comparison |
 | `LGBM_METAL_FORCE_CPU=1` | Use CPU histograms through the Metal learner for diagnosis |
 | `LGBM_METAL_COMPARE_HIST=1` | Compare one GPU histogram with a CPU calculation |
@@ -110,6 +110,12 @@ their keys, update examples and documentation together.
 These flags can change results and timing. The public benchmark rejects
 diagnostic overrides so its headline speed ratio uses the normal path. For
 profiling, run a separate diagnostic job and label it as such.
+`train` measures training inside the tree learner, excluding Python data generation,
+Dataset construction, and prediction. `gpu_inflight` overlaps CPU histogram work;
+`gpu_wait` is CPU time waiting for GPU completion and lies within GPU inflight time.
+Do not sum these cumulative stage totals into an end-to-end duration. Profiling
+and logging can also affect performance, so use interleaved runs with profiling
+disabled for speed comparisons.
 
 ## Publishing and portability
 

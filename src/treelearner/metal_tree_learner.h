@@ -27,11 +27,15 @@ class MetalTreeLearner final : public SerialTreeLearner {
   void ResetTrainingDataInner(const Dataset* train_data,
                               bool is_constant_hessian,
                               bool reset_multi_val_bin) override;
+  Tree* Train(const score_t* gradients, const score_t* hessians,
+              bool is_first_tree) override;
 
  protected:
   void BeforeTrain() override;
   void ConstructHistograms(const std::vector<int8_t>& is_feature_used,
                            bool use_subtract) override;
+  void FindBestSplitsFromHistograms(const std::vector<int8_t>& is_feature_used,
+                                    bool use_subtract, const Tree* tree) override;
 
  private:
   void BuildMirror();
@@ -53,6 +57,10 @@ class MetalTreeLearner final : public SerialTreeLearner {
   bool compared_hist_ = false;
   double cpu_hist_seconds_ = 0.0;
   uint64_t cpu_hist_calls_ = 0;
+  double train_seconds_ = 0.0;
+  double split_search_seconds_ = 0.0;
+  uint64_t train_calls_ = 0;
+  uint64_t split_search_calls_ = 0;
   data_size_t min_leaf_rows_ = 0;
 };
 
