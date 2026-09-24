@@ -71,7 +71,7 @@ PYTHONPATH="$PWD/python-package" python3 examples/python-guide/metal_synthetic_b
 | <code>LGBM_METAL_MIN_LEAF_ROWS=N</code> | 探索叶节点行数低于阈值时转 CPU |
 
 这些开关可能改变结果和耗时。公开基准会拒绝诊断覆盖项，使主报告速度比使用正常路径。profiling 应单独运行，并明确标注为诊断任务。
-<code>train</code> 计量树学习器内部的训练时间，不含 Python 数据生成、Dataset 构建与预测。<code>gpu_inflight</code> 和 <code>cpu_hist</code> 可同时进行；<code>gpu_wait</code> 是 CPU 等待 GPU 完成的时间，包含在 GPU 命令在途区间中。这些累计值不能相加为端到端耗时。各阶段计时与日志本身也可能影响性能，判断提速应使用关闭 profiling 的交错基准。
+<code>train</code> 计量树学习器内部的训练时间，不含 Python 数据生成、Dataset 构建与预测。<code>gpu_inflight</code> 是从提交后到 CPU 确认完成的墙钟时间，包含排队与执行；<code>gpu_execution</code> 累加 Metal 命令缓冲区报告的 GPU 执行时间，<code>gpu_timing_samples</code> 给出有效时间戳数量。<code>gpu_wait</code> 是 CPU 等待 GPU 完成的时间。GPU 与 CPU 直方图阶段可以重叠，不能把这些累计值相加为端到端耗时。计时与日志本身也可能影响性能，判断提速应使用关闭 profiling 的交错基准。
 
 ## 公开发布与可移植性
 

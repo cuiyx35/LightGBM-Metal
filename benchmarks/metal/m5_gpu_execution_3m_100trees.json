@@ -1,0 +1,43 @@
+{
+    "status": "DIAGNOSTIC_ONLY",
+    "data": "fully generated locally; no external files",
+    "hardware": "Apple M5, 32 GiB unified memory",
+    "configuration": {
+        "seed": 20260924,
+        "train_rows": 3300000,
+        "held_rows": 200000,
+        "features": 512,
+        "dense_features": 150,
+        "rare_binary_features": 362,
+        "rounds": 100,
+        "threads": 6,
+        "max_bin": 127,
+        "num_leaves": 63,
+        "device_type": "metal",
+        "LGBM_METAL_PROFILE": 1
+    },
+    "times_seconds": {
+        "generation": 15.337378,
+        "dataset_construction": 3.007291,
+        "fit_wall_clock": 21.329523,
+        "gpu_command_inflight": 15.866805,
+        "gpu_execution": 14.584648,
+        "cpu_wait_for_gpu": 12.558291,
+        "data_mirror": 0.612296,
+        "gradient_preparation": 0.277554,
+        "histogram_preparation": 0.423194,
+        "histogram_merge": 0.748466,
+        "predict": 0.199692
+    },
+    "metal_dispatches": 6200,
+    "valid_gpu_timing_samples": 6200,
+    "threadgroups": 2827447,
+    "model_sha256": "bfc0b19259103cf63c808c007d4e3335c10fcace999b8143d32cf1496132db18",
+    "prediction_sha256": "19a5c9dfbd1e18b0a2455641f1e5959d537fd54a15c60a53a01db4a60a5ce0c8",
+    "limitations": [
+        "One run on one chip with profiling enabled; this is not a speed benchmark.",
+        "GPU execution is the command-buffer time reported by Metal, not a per-instruction kernel trace.",
+        "GPU work overlaps CPU histogram work. Stage totals must not be added.",
+        "Generated data do not represent application feature distributions or model quality."
+    ]
+}

@@ -249,9 +249,11 @@ class MetalHistogramEngine {
   ~MetalHistogramEngine() {
     if (inflight_command_) [inflight_command_ waitUntilCompleted];
     if (profile_enabled_) {
-      Log::Info("Metal profile: setup=%.6fs mirror=%.6fs gradients=%.6fs preparation=%.6fs gpu_inflight=%.6fs gpu_wait=%.6fs merge=%.6fs dispatches=%llu threadgroups=%llu rows_per_shard=%u threads_per_group=%u compact_groups=%u allocated=%.1fMiB",
+      Log::Info("Metal profile: setup=%.6fs mirror=%.6fs gradients=%.6fs preparation=%.6fs gpu_inflight=%.6fs gpu_execution=%.6fs gpu_timing_samples=%llu gpu_wait=%.6fs merge=%.6fs dispatches=%llu threadgroups=%llu rows_per_shard=%u threads_per_group=%u compact_groups=%u allocated=%.1fMiB",
                 setup_seconds_, mirror_seconds_, gradient_seconds_, preparation_seconds_,
-                gpu_inflight_seconds_, gpu_wait_seconds_, merge_seconds_,
+                gpu_inflight_seconds_, gpu_execution_seconds_,
+                static_cast<unsigned long long>(gpu_timing_samples_),
+                gpu_wait_seconds_, merge_seconds_,
                 static_cast<unsigned long long>(dispatches_),
                 static_cast<unsigned long long>(threadgroups_), rows_per_shard_, threads_per_group_,
                 compact_groups_ ? 1u : 0u,
@@ -429,6 +431,12 @@ class MetalHistogramEngine {
     if (profile_enabled_) {
       gpu_wait_seconds_ += SecondsSince(wait_start);
       gpu_inflight_seconds_ += SecondsSince(inflight_start_);
+      const double gpu_start = [inflight_command_ GPUStartTime];
+      const double gpu_end = [inflight_command_ GPUEndTime];
+      if (std::isfinite(gpu_start) && std::isfinite(gpu_end) && gpu_end > gpu_start) {
+        gpu_execution_seconds_ += gpu_end - gpu_start;
+        ++gpu_timing_samples_;
+      }
     }
     if ([inflight_command_ status] != MTLCommandBufferStatusCompleted) {
       Log::Fatal("Metal histogram command failed: %s",
@@ -558,11 +566,13 @@ class MetalHistogramEngine {
   uint64_t buffer_bytes_ = 0;
   uint64_t dispatches_ = 0;
   uint64_t threadgroups_ = 0;
+  uint64_t gpu_timing_samples_ = 0;
   double setup_seconds_ = 0.0;
   double mirror_seconds_ = 0.0;
   double gradient_seconds_ = 0.0;
   double preparation_seconds_ = 0.0;
   double gpu_inflight_seconds_ = 0.0;
+  double gpu_execution_seconds_ = 0.0;
   double gpu_wait_seconds_ = 0.0;
   double merge_seconds_ = 0.0;
 };

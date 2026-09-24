@@ -111,9 +111,12 @@ These flags can change results and timing. The public benchmark rejects
 diagnostic overrides so its headline speed ratio uses the normal path. For
 profiling, run a separate diagnostic job and label it as such.
 `train` measures training inside the tree learner, excluding Python data generation,
-Dataset construction, and prediction. `gpu_inflight` overlaps CPU histogram work;
-`gpu_wait` is CPU time waiting for GPU completion and lies within GPU inflight time.
-Do not sum these cumulative stage totals into an end-to-end duration. Profiling
+Dataset construction, and prediction. `gpu_inflight` is wall time from command
+submission until the CPU observes completion, including queueing and execution.
+`gpu_execution` sums GPU execution times reported by Metal command buffers;
+`gpu_timing_samples` counts valid timestamps. `gpu_wait` is CPU time waiting for
+GPU completion. GPU and CPU histogram work can overlap, so do not sum these
+cumulative stage totals into an end-to-end duration. Profiling
 and logging can also affect performance, so use interleaved runs with profiling
 disabled for speed comparisons.
 

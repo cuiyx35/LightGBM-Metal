@@ -4,8 +4,9 @@
 
 These reports were produced by the experimental Metal fork on an
 Apple M5 Mac with 32 GiB unified memory, connected to AC power. The Metal
-implementation used the source state represented by commit `7807af1` after
-the standalone history rewrite. Both runs used the Metal-enabled
+implementation in the scale benchmark and first profile used the source state
+represented by commit `7807af1` after the standalone history rewrite. The
+GPU execution follow-up added diagnostic timing to the same kernel. Runs used the Metal-enabled
 LightGBM 4.7.0 source checkout and the same preconstructed Dataset.
 After the benchmark, a fresh CMake configure and build directory succeeded
 with CMake 4.4.3 and Apple Clang 21; the five validation cases passed again
@@ -16,6 +17,7 @@ against the rebuilt library.
 | [Scale benchmark](m5_synthetic_4m_500trees.json) | 3.3 million fit rows, 0.8 million held rows, 512 features, 500 trees, 6 CPU threads | CPU/Metal median fit ratio **1.55×** |
 | [Model-level validation](m5_validation.json) | Five small synthetic cases | All passed |
 | [Bottleneck profile](m5_profile_3m_100trees.json) | 3.3 million fit rows, 100 trees, 6 threads, profiling enabled | 16.14 s cumulative GPU command time; 12.92 s CPU wait for GPU |
+| [GPU execution follow-up](m5_gpu_execution_3m_100trees.json) | A new diagnostic run with the same configuration | 14.58 s cumulative GPU execution reported by Metal; 15.87 s cumulative command in-flight time |
 
 The large benchmark generated every feature and label from its fixed seed.
 It used 150 dense numeric and 362 rare binary features. After one-tree CPU
@@ -51,12 +53,15 @@ or row-level predictions are included here.
 
 ### Bottleneck profile
 
-The profile uses the same generator but trains only 100 trees, in one run
-with extra timing enabled. Tree learner training accumulated 19.58 s;
+The profiles use the same generator but train only 100 trees, with extra
+timing enabled. In the first run, tree learner training accumulated 19.58 s;
 GPU commands were in flight for 16.14 s. CPU histograms took 3.22 s,
-split search 0.49 s, and the data mirror 0.62 s. Some CPU and GPU work
-overlaps, and GPU wait is contained in command in-flight time. **Do not add
-these times.** This workload points to the GPU histogram kernel as the
-next performance target. The profile is not a speed result and cannot
-represent other data. Use the unprofiled interleaved benchmark above for
-speed comparisons.
+split search 0.49 s, and the data mirror 0.62 s. In a later run with GPU
+timestamps, all 6,200 commands returned valid timings: Metal reported
+14.58 s cumulative GPU execution within 15.87 s cumulative in-flight wall
+time. These separate runs cannot be subtracted item by item. Some CPU and GPU
+work overlaps, and GPU wait is contained in command in-flight time. **Do not
+add these times.** This workload points to the GPU histogram kernel as the
+next performance target. Neither profile is a speed result or represents
+other data. Use the unprofiled interleaved benchmark above for speed
+comparisons.
