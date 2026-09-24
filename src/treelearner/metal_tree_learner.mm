@@ -27,13 +27,14 @@ namespace {
 
 constexpr uint32_t kBins = 256;
 constexpr uint32_t kRowsPerShard = 16384;
-constexpr uint32_t kRowsPerChunk = 256;
+constexpr uint32_t kDefaultRowsPerChunk = 256;
 
 struct MetalParams {
   uint32_t selected_rows;
   uint32_t features;
   uint32_t matrix_rows;
   uint32_t rows_per_shard;
+  uint32_t rows_per_chunk;
   float gradient_scale;
   float hessian_scale;
 };
@@ -47,6 +48,7 @@ struct MetalParams {
   uint features;
   uint matrix_rows;
   uint rows_per_shard;
+  uint rows_per_chunk;
   float gradient_scale;
   float hessian_scale;
 };
@@ -69,12 +71,13 @@ kernel void lightgbm_histogram_grouped(
   threadgroup atomic_int chunk_hessian[256];
   long gradient_total = 0;
   long hessian_total = 0;
-  for (uint chunk = 0; chunk < params.rows_per_shard / 256; ++chunk) {
+  for (uint chunk = 0; chunk < params.rows_per_shard / params.rows_per_chunk; ++chunk) {
     atomic_store_explicit(&chunk_gradient[thread_index], 0, memory_order_relaxed);
     atomic_store_explicit(&chunk_hessian[thread_index], 0, memory_order_relaxed);
     threadgroup_barrier(mem_flags::mem_threadgroup);
-    const uint selected_index = shard * params.rows_per_shard + chunk * 256 + thread_index;
-    if (selected_index < params.selected_rows) {
+    const uint selected_index = shard * params.rows_per_shard +
+                                chunk * params.rows_per_chunk + thread_index;
+    if (thread_index < params.rows_per_chunk && selected_index < params.selected_rows) {
       const uint row = row_indices[selected_index];
       const uint bin = feature_bins[feature * params.matrix_rows + row];
       atomic_fetch_add_explicit(&chunk_gradient[bin],
@@ -110,6 +113,16 @@ class MetalHistogramEngine {
   MetalHistogramEngine() {
     const char* profile = std::getenv("LGBM_METAL_PROFILE");
     profile_enabled_ = profile != nullptr && std::strcmp(profile, "1") == 0;
+    const char* rows_per_chunk = std::getenv("LGBM_METAL_ROWS_PER_CHUNK");
+    if (rows_per_chunk != nullptr) {
+      char* end = nullptr;
+      const long parsed = std::strtol(rows_per_chunk, &end, 10);
+      if (*rows_per_chunk == '\0' || *end != '\0' ||
+          (parsed != 32 && parsed != 64 && parsed != 128 && parsed != 256)) {
+        Log::Fatal("LGBM_METAL_ROWS_PER_CHUNK must be 32, 64, 128, or 256");
+      }
+      rows_per_chunk_ = static_cast<uint32_t>(parsed);
+    }
     const auto setup_start = ProfileClock::now();
     device_ = MTLCreateSystemDefaultDevice();
     if (!device_) {
@@ -233,11 +246,11 @@ class MetalHistogramEngine {
       max_abs_gradient = std::max(max_abs_gradient, std::abs(double(gradients[row])));
       max_abs_hessian = std::max(max_abs_hessian, std::abs(double(hessians[row])));
     }
-    auto safe_scale = [](double max_abs) -> float {
+    auto safe_scale = [this](double max_abs) -> float {
       if (!std::isfinite(max_abs)) return 0.0f;
       if (max_abs == 0.0) return 1.0f;
       const double limit = double(std::numeric_limits<int32_t>::max()) /
-                           (double(kRowsPerChunk) * max_abs * 1.01);
+                           (double(rows_per_chunk_) * max_abs * 1.01);
       const double scale = std::min(1.0e30, std::floor(limit));
       if (scale < 1.0 || max_abs * scale < 1024.0) return 0.0f;
       return static_cast<float>(scale);
@@ -265,7 +278,8 @@ class MetalHistogramEngine {
       }
     }
     std::memcpy([mask_ contents], group_mask.data(), groups_);
-    const MetalParams params{static_cast<uint32_t>(selected_rows), groups_, rows_, kRowsPerShard,
+    const MetalParams params{static_cast<uint32_t>(selected_rows), groups_, rows_,
+                             kRowsPerShard, rows_per_chunk_,
                              gradient_scale_, hessian_scale_};
     id<MTLCommandBuffer> command = [queue_ commandBuffer];
     id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
@@ -354,6 +368,7 @@ class MetalHistogramEngine {
   bool active_ = false;
   float gradient_scale_ = 0.0f;
   float hessian_scale_ = 0.0f;
+  uint32_t rows_per_chunk_ = kDefaultRowsPerChunk;
   bool profile_enabled_ = false;
   uint64_t buffer_bytes_ = 0;
   uint64_t dispatches_ = 0;
