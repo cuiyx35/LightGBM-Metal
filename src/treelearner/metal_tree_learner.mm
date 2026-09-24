@@ -37,6 +37,7 @@ struct MetalParams {
   uint32_t rows_per_chunk;
   float gradient_scale;
   float hessian_scale;
+  uint32_t threads_per_group;
 };
 
 const char* kMetalSource = R"METAL(
@@ -51,6 +52,7 @@ struct MetalParams {
   uint rows_per_chunk;
   float gradient_scale;
   float hessian_scale;
+  uint threads_per_group;
 };
 
 kernel void lightgbm_histogram_grouped(
@@ -71,28 +73,67 @@ kernel void lightgbm_histogram_grouped(
   threadgroup atomic_int chunk_hessian[256];
   long gradient_total = 0;
   long hessian_total = 0;
+  long gradient_total_second = 0;
+  long hessian_total_second = 0;
+  long gradient_total_third = 0;
+  long hessian_total_third = 0;
+  long gradient_total_fourth = 0;
+  long hessian_total_fourth = 0;
   for (uint chunk = 0; chunk < params.rows_per_shard / params.rows_per_chunk; ++chunk) {
     atomic_store_explicit(&chunk_gradient[thread_index], 0, memory_order_relaxed);
     atomic_store_explicit(&chunk_hessian[thread_index], 0, memory_order_relaxed);
+    if (params.threads_per_group <= 128) {
+      atomic_store_explicit(&chunk_gradient[thread_index + params.threads_per_group], 0, memory_order_relaxed);
+      atomic_store_explicit(&chunk_hessian[thread_index + params.threads_per_group], 0, memory_order_relaxed);
+    }
+    if (params.threads_per_group == 64) {
+      atomic_store_explicit(&chunk_gradient[thread_index + 128], 0, memory_order_relaxed);
+      atomic_store_explicit(&chunk_hessian[thread_index + 128], 0, memory_order_relaxed);
+      atomic_store_explicit(&chunk_gradient[thread_index + 192], 0, memory_order_relaxed);
+      atomic_store_explicit(&chunk_hessian[thread_index + 192], 0, memory_order_relaxed);
+    }
     threadgroup_barrier(mem_flags::mem_threadgroup);
-    const uint selected_index = shard * params.rows_per_shard +
-                                chunk * params.rows_per_chunk + thread_index;
-    if (thread_index < params.rows_per_chunk && selected_index < params.selected_rows) {
-      const uint row = row_indices[selected_index];
-      const uint bin = feature_bins[feature * params.matrix_rows + row];
-      atomic_fetch_add_explicit(&chunk_gradient[bin],
-          int(rint(gradients[row] * params.gradient_scale)), memory_order_relaxed);
-      atomic_fetch_add_explicit(&chunk_hessian[bin],
-          int(rint(hessians[row] * params.hessian_scale)), memory_order_relaxed);
+    for (uint local = thread_index; local < params.rows_per_chunk;
+         local += params.threads_per_group) {
+      const uint selected_index = shard * params.rows_per_shard +
+                                  chunk * params.rows_per_chunk + local;
+      if (selected_index < params.selected_rows) {
+        const uint row = row_indices[selected_index];
+        const uint bin = feature_bins[feature * params.matrix_rows + row];
+        atomic_fetch_add_explicit(&chunk_gradient[bin],
+            int(rint(gradients[row] * params.gradient_scale)), memory_order_relaxed);
+        atomic_fetch_add_explicit(&chunk_hessian[bin],
+            int(rint(hessians[row] * params.hessian_scale)), memory_order_relaxed);
+      }
     }
     threadgroup_barrier(mem_flags::mem_threadgroup);
     gradient_total += atomic_load_explicit(&chunk_gradient[thread_index], memory_order_relaxed);
     hessian_total += atomic_load_explicit(&chunk_hessian[thread_index], memory_order_relaxed);
+    if (params.threads_per_group <= 128) {
+      gradient_total_second += atomic_load_explicit(&chunk_gradient[thread_index + params.threads_per_group], memory_order_relaxed);
+      hessian_total_second += atomic_load_explicit(&chunk_hessian[thread_index + params.threads_per_group], memory_order_relaxed);
+    }
+    if (params.threads_per_group == 64) {
+      gradient_total_third += atomic_load_explicit(&chunk_gradient[thread_index + 128], memory_order_relaxed);
+      hessian_total_third += atomic_load_explicit(&chunk_hessian[thread_index + 128], memory_order_relaxed);
+      gradient_total_fourth += atomic_load_explicit(&chunk_gradient[thread_index + 192], memory_order_relaxed);
+      hessian_total_fourth += atomic_load_explicit(&chunk_hessian[thread_index + 192], memory_order_relaxed);
+    }
     threadgroup_barrier(mem_flags::mem_threadgroup);
   }
   const uint output_index = (shard * params.features + feature) * 256 + thread_index;
   gradient_hist[output_index] = gradient_total;
   hessian_hist[output_index] = hessian_total;
+  if (params.threads_per_group <= 128) {
+    gradient_hist[output_index + params.threads_per_group] = gradient_total_second;
+    hessian_hist[output_index + params.threads_per_group] = hessian_total_second;
+  }
+  if (params.threads_per_group == 64) {
+    gradient_hist[output_index + 128] = gradient_total_third;
+    hessian_hist[output_index + 128] = hessian_total_third;
+    gradient_hist[output_index + 192] = gradient_total_fourth;
+    hessian_hist[output_index + 192] = hessian_total_fourth;
+  }
 }
 )METAL";
 
@@ -122,6 +163,16 @@ class MetalHistogramEngine {
         Log::Fatal("LGBM_METAL_ROWS_PER_CHUNK must be 32, 64, 128, or 256");
       }
       rows_per_chunk_ = static_cast<uint32_t>(parsed);
+    }
+    const char* threads_per_group = std::getenv("LGBM_METAL_THREADS_PER_GROUP");
+    if (threads_per_group != nullptr) {
+      char* end = nullptr;
+      const long parsed = std::strtol(threads_per_group, &end, 10);
+      if (*threads_per_group == '\0' || *end != '\0' ||
+          (parsed != 64 && parsed != 128 && parsed != 256)) {
+        Log::Fatal("LGBM_METAL_THREADS_PER_GROUP must be 64, 128, or 256");
+      }
+      threads_per_group_ = static_cast<uint32_t>(parsed);
     }
     const char* rows_per_shard = std::getenv("LGBM_METAL_ROWS_PER_SHARD");
     if (rows_per_shard != nullptr) {
@@ -188,10 +239,10 @@ class MetalHistogramEngine {
   ~MetalHistogramEngine() {
     if (inflight_command_) [inflight_command_ waitUntilCompleted];
     if (profile_enabled_) {
-      Log::Info("Metal profile: setup=%.6fs mirror=%.6fs gradients=%.6fs preparation=%.6fs gpu_inflight=%.6fs gpu_wait=%.6fs merge=%.6fs dispatches=%llu rows_per_shard=%u allocated=%.1fMiB",
+      Log::Info("Metal profile: setup=%.6fs mirror=%.6fs gradients=%.6fs preparation=%.6fs gpu_inflight=%.6fs gpu_wait=%.6fs merge=%.6fs dispatches=%llu rows_per_shard=%u threads_per_group=%u allocated=%.1fMiB",
                 setup_seconds_, mirror_seconds_, gradient_seconds_, preparation_seconds_,
                 gpu_inflight_seconds_, gpu_wait_seconds_, merge_seconds_,
-                static_cast<unsigned long long>(dispatches_), rows_per_shard_,
+                static_cast<unsigned long long>(dispatches_), rows_per_shard_, threads_per_group_,
                 double(buffer_bytes_) / (1024.0 * 1024.0));
     }
   }
@@ -316,7 +367,7 @@ class MetalHistogramEngine {
     std::memcpy([mask_ contents], group_mask.data(), groups_);
     const MetalParams params{static_cast<uint32_t>(selected_rows), groups_, rows_,
                              rows_per_shard_, rows_per_chunk_,
-                             gradient_scale_, hessian_scale_};
+                             gradient_scale_, hessian_scale_, threads_per_group_};
     id<MTLCommandBuffer> command = [queue_ commandBuffer];
     id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
     [encoder setComputePipelineState:pipeline_];
@@ -328,11 +379,11 @@ class MetalHistogramEngine {
     [encoder setBuffer:output_gradient_ offset:0 atIndex:5];
     [encoder setBuffer:output_hessian_ offset:0 atIndex:6];
     [encoder setBytes:&params length:sizeof(params) atIndex:7];
-    if ([pipeline_ maxTotalThreadsPerThreadgroup] < kBins) {
-      Log::Fatal("Metal device cannot run the required 256-thread histogram group");
+    if ([pipeline_ maxTotalThreadsPerThreadgroup] < threads_per_group_) {
+      Log::Fatal("Metal device cannot run the requested histogram thread group");
     }
     [encoder dispatchThreadgroups:MTLSizeMake(groups_, inflight_shards_, 1)
-        threadsPerThreadgroup:MTLSizeMake(kBins, 1, 1)];
+        threadsPerThreadgroup:MTLSizeMake(threads_per_group_, 1, 1)];
     [encoder endEncoding];
     if (profile_enabled_) preparation_seconds_ += SecondsSince(preparation_start);
     [command commit];
@@ -470,6 +521,7 @@ class MetalHistogramEngine {
   float hessian_scale_ = 0.0f;
   uint32_t rows_per_chunk_ = kDefaultRowsPerChunk;
   uint32_t rows_per_shard_ = kDefaultRowsPerShard;
+  uint32_t threads_per_group_ = 64;
   int verify_quantized_group_ = -1;
   uint64_t verify_quantized_dispatch_ = 1;
   uint64_t completed_builds_ = 0;
