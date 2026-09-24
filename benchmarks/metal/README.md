@@ -39,7 +39,7 @@ Metal-enabled native library:
 python examples/python-guide/metal_validate.py \
   --output metal_validation.json
 python examples/python-guide/metal_synthetic_benchmark.py \
-  --output metal_synthetic_benchmark.json
+  --full-scale --output metal_synthetic_benchmark.json
 ```
 
 The scripts write only aggregate JSON and hashes. No external data files

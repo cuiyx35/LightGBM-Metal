@@ -71,18 +71,29 @@ def digest_predictions(prediction: np.ndarray) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--train-rows", type=int, default=3_300_000)
-    parser.add_argument("--held-rows", type=int, default=800_000)
-    parser.add_argument("--features", type=int, default=512)
-    parser.add_argument("--dense-features", type=int, default=150)
-    parser.add_argument("--rounds", type=int, default=500)
-    parser.add_argument("--threads", type=int, default=6)
-    parser.add_argument("--repeats", type=int, choices=(1, 2), default=2)
+    parser.add_argument("--full-scale", action="store_true",
+                        help="Use the 4.1 million-row, 512-feature benchmark preset")
+    parser.add_argument("--train-rows", type=int)
+    parser.add_argument("--held-rows", type=int)
+    parser.add_argument("--features", type=int)
+    parser.add_argument("--dense-features", type=int)
+    parser.add_argument("--rounds", type=int)
+    parser.add_argument("--threads", type=int)
+    parser.add_argument("--repeats", type=int, choices=(1, 2))
     parser.add_argument("--seed", type=int, default=20260924)
     parser.add_argument("--positive-rate", type=float, default=0.05)
     parser.add_argument("--output", type=Path,
                         default=Path("metal_synthetic_benchmark.json"))
     args = parser.parse_args()
+    preset = ({"train_rows": 3_300_000, "held_rows": 800_000,
+               "features": 512, "dense_features": 150, "rounds": 500,
+               "threads": 6, "repeats": 2} if args.full_scale else
+              {"train_rows": 30_000, "held_rows": 5_000,
+               "features": 40, "dense_features": 12, "rounds": 10,
+               "threads": 2, "repeats": 1})
+    for name, value in preset.items():
+        if getattr(args, name) is None:
+            setattr(args, name, value)
     if (args.train_rows < 100 or args.held_rows < 100 or args.features < 3 or
             not 3 <= args.dense_features <= args.features or args.rounds < 1 or
             args.threads < 1 or not 0 < args.positive_rate < 0.5):

@@ -62,9 +62,10 @@ run or inspect this experiment.
 ## Public synthetic benchmark
 
 [`examples/python-guide/metal_synthetic_benchmark.py`](../examples/python-guide/metal_synthetic_benchmark.py)
-generates all its rows and labels locally from a fixed seed. Its default
-workload is 3.3 million fit rows, 0.8 million held rows, 512 features (150
-dense numeric and 362 rare binary), and 500 boosting rounds. It alternates two
+generates all its rows and labels locally from a fixed seed. By default it
+runs a quick 30,000-fit-row smoke test. Explicit `--full-scale` selects 3.3
+million fit rows, 0.8 million held rows, 512 features (150 dense numeric and
+362 rare binary), and 500 boosting rounds. The full-scale preset alternates two
 Metal and two CPU runs after one-tree warmups, using the same constructed
 Dataset. It reports timing, AP/AUC on synthetic labels, prediction differences,
 repeated-run hashes, and process peak RSS. No external data file is read and
@@ -72,11 +73,10 @@ the report contains no row-level examples or predictions.
 
 ```bash
 python examples/python-guide/metal_synthetic_benchmark.py \
-  --threads 6 --output synthetic_metal_result.json
+  --full-scale --output synthetic_metal_result.json
 ```
 
-For a smaller smoke test, use `--train-rows 30000 --held-rows 5000
---features 40 --dense-features 12 --rounds 10`. The default full benchmark
+For a small smoke test, omit `--full-scale`. The full-scale benchmark
 needs substantial unified memory; the source matrix alone occupies about
 2 GiB. The generated feature distribution, feature bundling, missingness,
 and label relationships will differ from real application data, even when
@@ -84,10 +84,10 @@ row count and feature count match. Its quality metrics measure only the
 generated task. Speed also depends on chip model, thermal conditions,
 background load, and OpenMP configuration.
 
-One Apple M5 run of the default workload and the four validation cases are
+One Apple M5 run of the full-scale preset and the four validation cases are
 recorded in [the public benchmark reports](../benchmarks/metal/README.md).
 
 This fork retains the upstream [MIT license](../LICENSE) and copyright
 notices; third-party submodules retain their own license files. Benchmark
-results should state the exact commit, hardware,
-configuration, run order, and whether data construction is included.
+results should state the exact commit, hardware, configuration, run order,
+and whether data construction is included.
