@@ -46,12 +46,14 @@ python examples/python-guide/metal_synthetic_benchmark.py \
 
 ## Star History
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/star-history-dark.svg" />
-  <img alt="LightGBM-Metal 的 Star History" src="assets/star-history.svg" />
-</picture>
+<a href="https://www.star-history.com/?repos=cuiyx35%2FLightGBM-Metal&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=cuiyx35/LightGBM-Metal&type=date&theme=dark&legend=top-left" />
+    <img alt="LightGBM-Metal 的 Star History" src="https://api.star-history.com/chart?repos=cuiyx35/LightGBM-Metal&type=date&legend=top-left" />
+  </picture>
+</a>
 
-图由[本仓库的 GitHub Actions](.github/workflows/star-history.yml)每周用临时仓库令牌从 GitHub 数据生成；不需要向第三方图表服务提供个人令牌。新仓库在出现第一颗星前会显示 0 的平线。
+图由第三方服务 [Star History](https://www.star-history.com/) 实时提供，不需要个人访问令牌。新仓库在出现第一颗星前可能只显示空坐标轴。
 
 ## 文档与二次开发
 

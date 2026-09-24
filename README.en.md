@@ -46,12 +46,14 @@ The script generates data locally and reads no external data file. Public report
 
 ## Star History
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/star-history-dark.svg" />
-  <img alt="LightGBM-Metal Star History" src="assets/star-history.svg" />
-</picture>
+<a href="https://www.star-history.com/?repos=cuiyx35%2FLightGBM-Metal&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=cuiyx35/LightGBM-Metal&type=date&theme=dark&legend=top-left" />
+    <img alt="LightGBM-Metal Star History" src="https://api.star-history.com/chart?repos=cuiyx35/LightGBM-Metal&type=date&legend=top-left" />
+  </picture>
+</a>
 
-[A workflow in this repository](.github/workflows/star-history.yml) refreshes the chart weekly from GitHub data using its short-lived repository token. No personal token is sent to a third-party chart service. A new repository shows a zero line until its first star.
+The chart is served live by the third-party [Star History](https://www.star-history.com/) service. No personal access token is required. Before the first star, a new repository may show only empty axes.
 
 ## Documentation and extension
 
