@@ -262,7 +262,7 @@ class MetalHistogramEngine {
     }
     active_ = true;
     if (profile_enabled_) mirror_seconds_ += SecondsSince(mirror_start);
-    Log::Info("Metal mirrored %u rows and %u dense feature groups", rows_, groups_);
+    Log::Info("Metal mirrored %u rows and %u feature groups into a dense byte matrix", rows_, groups_);
     return true;
   }
 
