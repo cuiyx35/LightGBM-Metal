@@ -1,8 +1,14 @@
 <img src=https://github.com/lightgbm-org/LightGBM/blob/main/docs/logo/LightGBM_logo_black_text.svg width=300 />
 
+> [!IMPORTANT]
+> The `apple-metal-experiment` branch is an independent experimental fork,
+> not an official LightGBM release. Its Apple Silicon Metal training path is
+> described in [Metal experimental notes](docs/Metal-Experimental.md).
+> Upstream badges below report upstream CI, not validation of this branch.
+
 > [!NOTE]
-> This project moved from `Microsoft/LightGBM` to `lightgbm-org/LightGBM` in March 2026.
-> This repository is still the official LightGBM source code, managed by the same maintainers (including the creator of LightGBM).
+> Upstream LightGBM moved from `Microsoft/LightGBM` to `lightgbm-org/LightGBM` in March 2026.
+> The upstream repository is the official LightGBM source code, managed by the same maintainers (including the creator of LightGBM).
 > For details, see https://github.com/lightgbm-org/LightGBM/issues/7187
 
 Light Gradient Boosting Machine

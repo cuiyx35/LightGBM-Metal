@@ -1,0 +1,122 @@
+{
+  "status": "PASS",
+  "scope": "fully_synthetic_scale_benchmark",
+  "lightgbm_version": "source-checkout",
+  "machine": "arm64",
+  "configuration": {
+    "train_rows": 3300000,
+    "held_rows": 800000,
+    "features": 512,
+    "dense_features": 150,
+    "rare_binary_features": 362,
+    "rounds": 500,
+    "threads": 6,
+    "seed": 20260924,
+    "positive_rate": 0.05,
+    "data_dtype": "uint8",
+    "max_bin": 127,
+    "parameters": {
+      "objective": "binary",
+      "metric": "binary_logloss",
+      "verbosity": 1,
+      "learning_rate": 0.025,
+      "num_leaves": 63,
+      "min_data_in_leaf": 35,
+      "lambda_l2": 4.0,
+      "feature_fraction": 0.8,
+      "max_bin": 127,
+      "num_threads": 6,
+      "seed": 20260924,
+      "force_col_wise": true
+    }
+  },
+  "generate_seconds_shared": 18.497708,
+  "dataset_construct_seconds_shared": 3.221822,
+  "warmups_not_timed": [
+    {
+      "backend": "cpu",
+      "seconds": 0.764061
+    },
+    {
+      "backend": "metal",
+      "seconds": 1.452916
+    }
+  ],
+  "run_order": [
+    "metal",
+    "cpu",
+    "cpu",
+    "metal"
+  ],
+  "runs": [
+    {
+      "index": 0,
+      "backend": "metal",
+      "fit_seconds": 107.999786,
+      "predict_seconds": 4.383123,
+      "average_precision": 0.6132768053805138,
+      "auc": 0.9623199322392393,
+      "model_sha256": "37023b9230c2f77be05e2423728759147331cf486613eec5128801ff6a74d44e",
+      "prediction_sha256": "7e13463eed6eac6fb52d8f475d447f69d222c304fd7cb017a20c7bf7ba96f500",
+      "trees": 500
+    },
+    {
+      "index": 1,
+      "backend": "cpu",
+      "fit_seconds": 178.928182,
+      "predict_seconds": 4.677461,
+      "average_precision": 0.6132768033133735,
+      "auc": 0.9623199319754939,
+      "model_sha256": "d190fadc707703b2d8960309d2579fcf13c104e642f94cd536dcc3ff48a8b5ca",
+      "prediction_sha256": "b95a822c87ed9a15d6a9cd87fa79c3dc988fb45dc620a0b5a21415a756f87e73",
+      "trees": 500
+    },
+    {
+      "index": 2,
+      "backend": "cpu",
+      "fit_seconds": 183.503501,
+      "predict_seconds": 4.582106,
+      "average_precision": 0.6132768033133735,
+      "auc": 0.9623199319754939,
+      "model_sha256": "d190fadc707703b2d8960309d2579fcf13c104e642f94cd536dcc3ff48a8b5ca",
+      "prediction_sha256": "b95a822c87ed9a15d6a9cd87fa79c3dc988fb45dc620a0b5a21415a756f87e73",
+      "trees": 500
+    },
+    {
+      "index": 3,
+      "backend": "metal",
+      "fit_seconds": 125.665497,
+      "predict_seconds": 4.644658,
+      "average_precision": 0.6132768053805138,
+      "auc": 0.9623199322392393,
+      "model_sha256": "37023b9230c2f77be05e2423728759147331cf486613eec5128801ff6a74d44e",
+      "prediction_sha256": "7e13463eed6eac6fb52d8f475d447f69d222c304fd7cb017a20c7bf7ba96f500",
+      "trees": 500
+    }
+  ],
+  "median": {
+    "cpu": {
+      "fit_seconds": 181.2158415,
+      "fit_plus_predict_seconds": 185.84562499999998
+    },
+    "metal": {
+      "fit_seconds": 116.8326415,
+      "fit_plus_predict_seconds": 121.346532
+    }
+  },
+  "cpu_over_metal_fit_speedup": 1.5510720221112182,
+  "cpu_over_metal_fit_plus_predict_speedup": 1.5315281115738848,
+  "metal_vs_cpu_prediction": {
+    "mean_absolute_difference": 2.143092670909021e-09,
+    "maximum_absolute_difference": 1.856424675983348e-06,
+    "count_above_0_001": 0,
+    "count_above_0_01": 0
+  },
+  "peak_process_rss_gib": 9.719,
+  "limitations": [
+    "Only workload geometry is similar to an application workload; feature and label distributions are entirely synthetic.",
+    "One machine and one seed; timing varies with system load.",
+    "The shared generation and Dataset construction times are excluded from per-backend training times.",
+    "The synthetic quality metrics cannot establish application quality."
+  ]
+}
