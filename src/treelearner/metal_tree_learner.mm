@@ -26,7 +26,7 @@ namespace LightGBM {
 namespace {
 
 constexpr uint32_t kBins = 256;
-constexpr uint32_t kRowsPerShard = 16384;
+constexpr uint32_t kDefaultRowsPerShard = 16384;
 constexpr uint32_t kDefaultRowsPerChunk = 256;
 
 struct MetalParams {
@@ -123,15 +123,40 @@ class MetalHistogramEngine {
       }
       rows_per_chunk_ = static_cast<uint32_t>(parsed);
     }
+    const char* rows_per_shard = std::getenv("LGBM_METAL_ROWS_PER_SHARD");
+    if (rows_per_shard != nullptr) {
+      char* end = nullptr;
+      const long parsed = std::strtol(rows_per_shard, &end, 10);
+      if (*rows_per_shard == '\0' || *end != '\0' ||
+          (parsed != 4096 && parsed != 8192 && parsed != 16384 &&
+           parsed != 32768 && parsed != 65536)) {
+        Log::Fatal("LGBM_METAL_ROWS_PER_SHARD must be 4096, 8192, 16384, 32768, or 65536");
+      }
+      rows_per_shard_ = static_cast<uint32_t>(parsed);
+    }
     const char* verify_group = std::getenv("LGBM_METAL_VERIFY_QUANTIZED_GROUP");
     if (verify_group != nullptr) {
-      char* end = nullptr;
-      const long parsed = std::strtol(verify_group, &end, 10);
-      if (*verify_group == '\0' || *end != '\0' || parsed < 0 ||
-          parsed > std::numeric_limits<int>::max()) {
-        Log::Fatal("LGBM_METAL_VERIFY_QUANTIZED_GROUP must be a non-negative group id");
+      if (std::strcmp(verify_group, "all") == 0) {
+        verify_quantized_group_ = -2;
+      } else {
+        char* end = nullptr;
+        const long parsed = std::strtol(verify_group, &end, 10);
+        if (*verify_group == '\0' || *end != '\0' || parsed < 0 ||
+            parsed > std::numeric_limits<int>::max()) {
+          Log::Fatal("LGBM_METAL_VERIFY_QUANTIZED_GROUP must be all or a non-negative group id");
+        }
+        verify_quantized_group_ = static_cast<int>(parsed);
       }
-      verify_quantized_group_ = static_cast<int>(parsed);
+    }
+    const char* verify_dispatch = std::getenv("LGBM_METAL_VERIFY_QUANTIZED_DISPATCH");
+    if (verify_dispatch != nullptr) {
+      char* end = nullptr;
+      const long parsed = std::strtol(verify_dispatch, &end, 10);
+      if (verify_group == nullptr || *verify_dispatch == '\0' || *end != '\0' ||
+          parsed < 1 || parsed > 1000000) {
+        Log::Fatal("LGBM_METAL_VERIFY_QUANTIZED_DISPATCH requires a group check and an index from 1 to 1000000");
+      }
+      verify_quantized_dispatch_ = static_cast<uint64_t>(parsed);
     }
     const auto setup_start = ProfileClock::now();
     device_ = MTLCreateSystemDefaultDevice();
@@ -163,10 +188,10 @@ class MetalHistogramEngine {
   ~MetalHistogramEngine() {
     if (inflight_command_) [inflight_command_ waitUntilCompleted];
     if (profile_enabled_) {
-      Log::Info("Metal profile: setup=%.6fs mirror=%.6fs gradients=%.6fs preparation=%.6fs gpu_inflight=%.6fs gpu_wait=%.6fs merge=%.6fs dispatches=%llu allocated=%.1fMiB",
+      Log::Info("Metal profile: setup=%.6fs mirror=%.6fs gradients=%.6fs preparation=%.6fs gpu_inflight=%.6fs gpu_wait=%.6fs merge=%.6fs dispatches=%llu rows_per_shard=%u allocated=%.1fMiB",
                 setup_seconds_, mirror_seconds_, gradient_seconds_, preparation_seconds_,
                 gpu_inflight_seconds_, gpu_wait_seconds_, merge_seconds_,
-                static_cast<unsigned long long>(dispatches_),
+                static_cast<unsigned long long>(dispatches_), rows_per_shard_,
                 double(buffer_bytes_) / (1024.0 * 1024.0));
     }
   }
@@ -190,7 +215,7 @@ class MetalHistogramEngine {
       Log::Warning("Metal matrix exceeds the current 32-bit grid or device buffer limit; using CPU");
       return false;
     }
-    const uint64_t shards = (uint64_t(rows_) + kRowsPerShard - 1) / kRowsPerShard;
+    const uint64_t shards = (uint64_t(rows_) + rows_per_shard_ - 1) / rows_per_shard_;
     const uint64_t output_bytes = shards * groups_ * kBins * sizeof(int64_t);
     if (output_bytes > [device_ maxBufferLength] ||
         shards * groups_ * kBins > std::numeric_limits<uint32_t>::max()) {
@@ -279,7 +304,7 @@ class MetalHistogramEngine {
     }
     if (inflight_command_) Log::Fatal("Metal histogram build is already in flight");
     const auto preparation_start = ProfileClock::now();
-    inflight_shards_ = (uint64_t(selected_rows) + kRowsPerShard - 1) / kRowsPerShard;
+    inflight_shards_ = (uint64_t(selected_rows) + rows_per_shard_ - 1) / rows_per_shard_;
     inflight_selected_rows_ = static_cast<uint32_t>(selected_rows);
     auto* gpu_indices = static_cast<uint32_t*>([indices_ contents]);
     for (data_size_t row = 0; row < selected_rows; ++row) {
@@ -290,7 +315,7 @@ class MetalHistogramEngine {
     }
     std::memcpy([mask_ contents], group_mask.data(), groups_);
     const MetalParams params{static_cast<uint32_t>(selected_rows), groups_, rows_,
-                             kRowsPerShard, rows_per_chunk_,
+                             rows_per_shard_, rows_per_chunk_,
                              gradient_scale_, hessian_scale_};
     id<MTLCommandBuffer> command = [queue_ commandBuffer];
     id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
@@ -335,9 +360,17 @@ class MetalHistogramEngine {
     inflight_command_ = nil;
     const auto* gpu_gradient = static_cast<const int64_t*>([output_gradient_ contents]);
     const auto* gpu_hessian = static_cast<const int64_t*>([output_hessian_ contents]);
-    if (verify_quantized_group_ >= 0 && !verified_quantized_group_) {
+    ++completed_builds_;
+    if (verify_quantized_group_ != -1 && !verified_quantized_group_ &&
+        completed_builds_ == verify_quantized_dispatch_) {
+      uint32_t verified_groups = 0;
+      uint64_t max_gradient_units_all = 0;
+      uint64_t max_hessian_units_all = 0;
+      uint32_t mismatched_gradient_bins_all = 0;
+      uint32_t mismatched_hessian_bins_all = 0;
       for (uint32_t slot = 0; slot < groups_; ++slot) {
-        if (!group_mask[slot] || groups[slot] != verify_quantized_group_) continue;
+        if (!group_mask[slot] ||
+            (verify_quantized_group_ >= 0 && groups[slot] != verify_quantized_group_)) continue;
         std::vector<int64_t> expected_gradient(kBins, 0);
         std::vector<int64_t> expected_hessian(kBins, 0);
         const auto* matrix = static_cast<const uint8_t*>([matrix_ contents]);
@@ -373,13 +406,21 @@ class MetalHistogramEngine {
           mismatched_gradient_bins += gradient_units != 0;
           mismatched_hessian_bins += hessian_units != 0;
         }
-        Log::Info("Metal quantized verification group=%d rows=%u gradient_scale=%.9g hessian_scale=%.9g max_gradient_integer_difference=%llu max_hessian_integer_difference=%llu mismatched_gradient_bins=%u mismatched_hessian_bins=%u",
-                  verify_quantized_group_, inflight_selected_rows_, gradient_scale_,
-                  hessian_scale_, static_cast<unsigned long long>(max_gradient_units),
-                  static_cast<unsigned long long>(max_hessian_units),
-                  mismatched_gradient_bins, mismatched_hessian_bins);
+        ++verified_groups;
+        max_gradient_units_all = std::max(max_gradient_units_all, max_gradient_units);
+        max_hessian_units_all = std::max(max_hessian_units_all, max_hessian_units);
+        mismatched_gradient_bins_all += mismatched_gradient_bins;
+        mismatched_hessian_bins_all += mismatched_hessian_bins;
+        if (verify_quantized_group_ >= 0) break;
+      }
+      if (verified_groups > 0) {
+        Log::Info("Metal quantized verification dispatch=%llu groups=%u rows=%u gradient_scale=%.9g hessian_scale=%.9g max_gradient_integer_difference=%llu max_hessian_integer_difference=%llu mismatched_gradient_bins=%u mismatched_hessian_bins=%u",
+                  static_cast<unsigned long long>(completed_builds_), verified_groups,
+                  inflight_selected_rows_, gradient_scale_,
+                  hessian_scale_, static_cast<unsigned long long>(max_gradient_units_all),
+                  static_cast<unsigned long long>(max_hessian_units_all),
+                  mismatched_gradient_bins_all, mismatched_hessian_bins_all);
         verified_quantized_group_ = true;
-        break;
       }
     }
     const auto merge_start = ProfileClock::now();
@@ -428,7 +469,10 @@ class MetalHistogramEngine {
   float gradient_scale_ = 0.0f;
   float hessian_scale_ = 0.0f;
   uint32_t rows_per_chunk_ = kDefaultRowsPerChunk;
+  uint32_t rows_per_shard_ = kDefaultRowsPerShard;
   int verify_quantized_group_ = -1;
+  uint64_t verify_quantized_dispatch_ = 1;
+  uint64_t completed_builds_ = 0;
   bool verified_quantized_group_ = false;
   bool profile_enabled_ = false;
   uint64_t buffer_bytes_ = 0;
