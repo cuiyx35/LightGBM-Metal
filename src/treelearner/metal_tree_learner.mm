@@ -492,6 +492,8 @@ MetalTreeLearner::MetalTreeLearner(const Config* config)
   force_cpu_ = force_cpu != nullptr && std::strcmp(force_cpu, "1") == 0;
   const char* disable_overlap = std::getenv("LGBM_METAL_DISABLE_OVERLAP");
   disable_overlap_ = disable_overlap != nullptr && std::strcmp(disable_overlap, "1") == 0;
+  const char* profile = std::getenv("LGBM_METAL_PROFILE");
+  profile_enabled_ = profile != nullptr && std::strcmp(profile, "1") == 0;
   const char* compare_hist = std::getenv("LGBM_METAL_COMPARE_HIST");
   compare_hist_ = compare_hist != nullptr && std::strcmp(compare_hist, "1") == 0;
   const char* min_leaf_rows = std::getenv("LGBM_METAL_MIN_LEAF_ROWS");
@@ -511,7 +513,12 @@ MetalTreeLearner::MetalTreeLearner(const Config* config)
   }
 }
 
-MetalTreeLearner::~MetalTreeLearner() = default;
+MetalTreeLearner::~MetalTreeLearner() {
+  if (profile_enabled_) {
+    Log::Info("Metal learner profile: cpu_hist=%.6fs cpu_hist_calls=%llu",
+              cpu_hist_seconds_, static_cast<unsigned long long>(cpu_hist_calls_));
+  }
+}
 
 void MetalTreeLearner::Init(const Dataset* train_data, bool is_constant_hessian) {
   SerialTreeLearner::Init(train_data, is_constant_hessian);
@@ -537,12 +544,45 @@ void MetalTreeLearner::BuildMirror() {
   for (int feature = 0; feature < num_features_; ++feature) {
     ++group_feature_count_[train_data_->Feature2Group(feature)];
   }
+  uint32_t eligible_groups = 0;
+  uint32_t multi_groups = 0;
+  uint32_t bundled_groups = 0;
+  uint32_t wide_groups = 0;
+  uint64_t eligible_bins = 0;
+  uint64_t multi_bins = 0;
+  uint64_t bundled_bins = 0;
+  uint64_t wide_bins = 0;
+  uint32_t multi_features = 0;
+  uint32_t bundled_features = 0;
   for (int group = 0; group < train_data_->num_feature_groups(); ++group) {
+    const int features = group_feature_count_[group];
+    if (features == 0) continue;
+    const int bins = train_data_->FeatureGroupNumBin(group);
     if (group_feature_count_[group] == 1 && !train_data_->IsMultiGroup(group) &&
         train_data_->FeatureGroupNumBin(group) <= static_cast<int>(kBins)) {
       group_to_slot_[group] = static_cast<int>(metal_groups_.size());
       metal_groups_.push_back(group);
+      ++eligible_groups;
+      eligible_bins += bins;
+    } else if (train_data_->IsMultiGroup(group)) {
+      ++multi_groups;
+      multi_features += features;
+      multi_bins += bins;
+    } else if (features > 1) {
+      ++bundled_groups;
+      bundled_features += features;
+      bundled_bins += bins;
+    } else {
+      ++wide_groups;
+      wide_bins += bins;
     }
+  }
+  if (profile_enabled_) {
+    Log::Info("Metal group coverage: eligible_groups=%u eligible_bins=%llu multi_groups=%u multi_features=%u multi_bins=%llu bundled_groups=%u bundled_features=%u bundled_bins=%llu wide_groups=%u wide_bins=%llu",
+              eligible_groups, static_cast<unsigned long long>(eligible_bins),
+              multi_groups, multi_features, static_cast<unsigned long long>(multi_bins),
+              bundled_groups, bundled_features, static_cast<unsigned long long>(bundled_bins),
+              wide_groups, static_cast<unsigned long long>(wide_bins));
   }
   if (!engine_->MirrorDataset(train_data_, metal_groups_)) {
     metal_groups_.clear();
@@ -629,11 +669,17 @@ void MetalTreeLearner::ConstructHistograms(const std::vector<int8_t>& is_feature
     FinishLeafHistogram(group_mask, smaller, smaller_leaf_splits_->sum_gradients(),
                         smaller_leaf_splits_->sum_hessians());
   }
+  ProfileClock::time_point cpu_hist_start;
+  if (profile_enabled_) cpu_hist_start = ProfileClock::now();
   train_data_->ConstructHistograms<false, 0>(
       smaller_gpu ? cpu_features : is_feature_used,
       smaller_leaf_splits_->data_indices(), smaller_leaf_splits_->num_data_in_leaf(),
       gradients_, hessians_, ordered_gradients_.data(), ordered_hessians_.data(),
       share_state_.get(), smaller);
+  if (profile_enabled_) {
+    cpu_hist_seconds_ += SecondsSince(cpu_hist_start);
+    ++cpu_hist_calls_;
+  }
   if (smaller_gpu && !disable_overlap_) {
     FinishLeafHistogram(group_mask, smaller, smaller_leaf_splits_->sum_gradients(),
                         smaller_leaf_splits_->sum_hessians());
@@ -739,11 +785,16 @@ void MetalTreeLearner::ConstructHistograms(const std::vector<int8_t>& is_feature
       FinishLeafHistogram(group_mask, larger, larger_leaf_splits_->sum_gradients(),
                           larger_leaf_splits_->sum_hessians());
     }
+    if (profile_enabled_) cpu_hist_start = ProfileClock::now();
     train_data_->ConstructHistograms<false, 0>(
         larger_gpu ? cpu_features : is_feature_used,
         larger_leaf_splits_->data_indices(), larger_leaf_splits_->num_data_in_leaf(),
         gradients_, hessians_, ordered_gradients_.data(), ordered_hessians_.data(),
         share_state_.get(), larger);
+    if (profile_enabled_) {
+      cpu_hist_seconds_ += SecondsSince(cpu_hist_start);
+      ++cpu_hist_calls_;
+    }
     if (larger_gpu && !disable_overlap_) {
       FinishLeafHistogram(group_mask, larger, larger_leaf_splits_->sum_gradients(),
                           larger_leaf_splits_->sum_hessians());

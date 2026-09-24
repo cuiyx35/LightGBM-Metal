@@ -8,6 +8,7 @@
 
 #ifdef USE_METAL
 
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -47,8 +48,11 @@ class MetalTreeLearner final : public SerialTreeLearner {
   bool logged_dispatch_ = false;
   bool force_cpu_ = false;
   bool disable_overlap_ = false;
+  bool profile_enabled_ = false;
   bool compare_hist_ = false;
   bool compared_hist_ = false;
+  double cpu_hist_seconds_ = 0.0;
+  uint64_t cpu_hist_calls_ = 0;
   data_size_t min_leaf_rows_ = 0;
 };
 
