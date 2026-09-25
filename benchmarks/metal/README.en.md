@@ -20,6 +20,7 @@ against the rebuilt library.
 | [GPU execution follow-up](m5_gpu_execution_3m_100trees.json) | A new diagnostic run with the same configuration | 14.58 s cumulative GPU execution reported by Metal; 15.87 s cumulative command in-flight time |
 | [Large-leaf gradient staging comparison](m5_stage_selected_3m_100trees.json) | 3.3 million fit rows, 0.2 million generated held rows, 512 features, 100 trees, 6 threads; interleaved old/new Metal paths | **1.27×** old/new median fit-time ratio; identical model and prediction hashes |
 | [Current CPU/Metal comparison](m5_current_3m_100trees_cpu_metal.json) | 3.3 million fit rows, 0.2 million generated held rows, 512 features, 100 trees, 6 threads; interleaved Metal/CPU runs | **1.67×** CPU/Metal median fit-time ratio |
+| [Current 500-tree CPU/Metal comparison](m5_current_3m_500trees_cpu_metal.json) | Same generator, 3.3 million fit rows, 0.2 million held rows, 500 trees, 6 threads; interleaved Metal/CPU runs | **1.89×** CPU/Metal median fit-time ratio, with substantial timing drift |
 
 The large benchmark generated every feature and label from its fixed seed.
 It used 150 dense numeric and 362 rare binary features. After one-tree CPU
@@ -40,8 +41,7 @@ categorical values, or label relationships. This is one chip, one seed, and
 two runs per backend; thermal conditions and background load can change
 timings. The validation case times are not a speed benchmark.
 
-The 500-tree CPU/Metal ratio above came from pre-optimization commit `7807af1`;
-it is not a 500-tree speed measurement of the current branch. The current
+The **1.55×** 500-tree CPU/Metal ratio above came from pre-optimization commit `7807af1`. The current
 branch stages and quantizes gradients and Hessians on the GPU for leaves
 larger than one shard by default. The new Metal-to-Metal comparison used
 generated data with a fixed seed and ran old → new → new → old. Fit times
@@ -63,6 +63,19 @@ the historical 500-tree test, so the two ratios do not measure a
 cross-version speed change. Neither test establishes application model
 quality.
 
+A separate **500-tree** comparison of the current version at `672b9d2`
+used 3.3 million fit rows, 512 features, 6 threads, and 0.2 million
+generated held rows. Metal → CPU → CPU → Metal fit times were
+**78.393 / 153.729 / 182.691 / 99.807** seconds. Median Metal/CPU fit times
+were **89.100 / 168.210** seconds, giving a **1.89×** CPU/Metal ratio; the fit-plus-prediction
+ratio was **1.88×**. Both backends' second runs were substantially slower,
+so this describes the interleaved runs rather than a stable speed guarantee.
+Within each backend, model and prediction hashes repeated exactly. Maximum
+Metal/CPU held prediction difference was **3.17e-6**, with none above 0.001.
+Peak RSS was **9.408 GiB**. The historical 500-tree test used a different held
+set size, source state, and time period; subtracting the two ratios would not
+measure an optimization gain.
+
 To reproduce after building and selecting this fork's Python package and
 Metal-enabled native library:
 
@@ -77,6 +90,10 @@ python examples/python-guide/metal_synthetic_benchmark.py \
   --train-rows 3300000 --held-rows 200000 --features 512 \
   --dense-features 150 --rounds 100 --threads 6 --repeats 2 \
   --output metal_current_cpu_metal.json
+python examples/python-guide/metal_synthetic_benchmark.py \
+  --train-rows 3300000 --held-rows 200000 --features 512 \
+  --dense-features 150 --rounds 500 --threads 6 --repeats 2 \
+  --output metal_current_500_cpu_metal.json
 ```
 
 The scripts write only aggregate JSON and hashes. No external data files
