@@ -1,0 +1,69 @@
+{
+  "status": "PASS",
+  "scope": "generated_data_only",
+  "configuration": {
+    "train_rows": 3300000,
+    "held_rows": 200000,
+    "features": 512,
+    "dense_features": 150,
+    "rounds": 100,
+    "threads": 6
+  },
+  "seed": 20260924,
+  "run_order": [
+    "legacy",
+    "adaptive",
+    "adaptive",
+    "legacy"
+  ],
+  "runs": [
+    {
+      "mode": "legacy",
+      "fit_seconds": 21.944801,
+      "average_precision": 0.5952271420961195,
+      "auc": 0.9590143521971778,
+      "model_sha256": "b7740a222b30082fd2647cf9d3d434c21c2df44f97a4f0b06448d5711219a014",
+      "prediction_sha256": "19a5c9dfbd1e18b0a2455641f1e5959d537fd54a15c60a53a01db4a60a5ce0c8"
+    },
+    {
+      "mode": "adaptive",
+      "fit_seconds": 17.527757,
+      "average_precision": 0.5952271420961195,
+      "auc": 0.9590143521971778,
+      "model_sha256": "b7740a222b30082fd2647cf9d3d434c21c2df44f97a4f0b06448d5711219a014",
+      "prediction_sha256": "19a5c9dfbd1e18b0a2455641f1e5959d537fd54a15c60a53a01db4a60a5ce0c8"
+    },
+    {
+      "mode": "adaptive",
+      "fit_seconds": 17.696954,
+      "average_precision": 0.5952271420961195,
+      "auc": 0.9590143521971778,
+      "model_sha256": "b7740a222b30082fd2647cf9d3d434c21c2df44f97a4f0b06448d5711219a014",
+      "prediction_sha256": "19a5c9dfbd1e18b0a2455641f1e5959d537fd54a15c60a53a01db4a60a5ce0c8"
+    },
+    {
+      "mode": "legacy",
+      "fit_seconds": 22.851132,
+      "average_precision": 0.5952271420961195,
+      "auc": 0.9590143521971778,
+      "model_sha256": "b7740a222b30082fd2647cf9d3d434c21c2df44f97a4f0b06448d5711219a014",
+      "prediction_sha256": "19a5c9dfbd1e18b0a2455641f1e5959d537fd54a15c60a53a01db4a60a5ce0c8"
+    }
+  ],
+  "median_fit_seconds": {
+    "legacy": 22.3979665,
+    "adaptive": 17.6123555
+  },
+  "legacy_to_adaptive_fit_ratio": 1.2717189645643934,
+  "same_model_across_modes": true,
+  "same_prediction_across_modes": true,
+  "max_prediction_difference": 0.0,
+  "external_data_read": false,
+  "row_predictions_written": false,
+  "limitations": [
+    "One Apple Silicon machine, one generated seed, two runs per mode.",
+    "No one-tree warmup; data generation and Dataset construction are excluded from fit times.",
+    "Thermals and background load may affect even interleaved timings.",
+    "This compares two Metal algorithms, not CPU with Metal or application model quality."
+  ]
+}

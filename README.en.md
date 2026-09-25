@@ -37,7 +37,10 @@ Set <code>device_type="metal"</code> to train with Metal, or <code>device_type="
 
 ## Public benchmark
 
-On one Apple M5 with 32 GiB unified memory, a generated-data test with 3.3 million fit rows, 0.8 million held rows, 512 features, 500 trees, and 6 CPU threads produced a **1.55× CPU/Metal median training-time ratio**. The median ratio for training plus prediction was 1.53×. Including the one-time data generation and Dataset construction cost shared by both backends gives an estimated overall ratio of 1.45×. There were two runs per backend; these numbers do not describe other machines or real application data. See the [public benchmark report](benchmarks/metal/README.en.md) for configuration, raw JSON, model differences, and limitations.
+On one Apple M5 with 32 GiB unified memory, a generated-data test with 3.3 million fit rows, 0.8 million held rows, 512 features, 500 trees, and 6 CPU threads produced a **1.55× CPU/Metal median training-time ratio**. The median ratio for training plus prediction was 1.53×. Including the one-time data generation and Dataset construction cost shared by both backends gives an estimated overall ratio of 1.45×. **This result came from commit <code>7807af1</code>, before large-leaf gradient staging; it is not a 500-tree speed measurement of the current version.** The current version stages and quantizes selected gradients and Hessians on the GPU for large leaves by default. See the [public benchmark report](benchmarks/metal/README.en.md) for a comparison of the two Metal paths, raw JSON, and limitations. Results from one machine do not describe other chips or real application data.
+
+A separate generated-data comparison with 3.3 million fit rows and 100 trees found a **1.27× old/new Metal median fit-time ratio**, with identical model and prediction hashes. This compares two Metal algorithms, not the current version against CPU.
+In a paired CPU/Metal test at the same 100-tree scale, the current version had a **1.67× CPU/Metal median fit-time ratio**. This has a different tree count from the historical 500-tree test; see the report for details.
 
 The full-scale synthetic test needs substantial unified memory and must be selected explicitly:
 

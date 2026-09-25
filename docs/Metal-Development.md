@@ -31,6 +31,7 @@ GPU kernel 从源码中的 <code>kMetalSource</code> 字符串在运行时编译
 | <code>src/treelearner/metal_tree_learner.mm</code> | 适用性判断、数据镜像、GPU kernel、CPU/GPU 并发、合并及 profiling |
 | <code>examples/python-guide/metal_validate.py</code> | 五项合成数据模型级检查 |
 | <code>examples/python-guide/metal_synthetic_benchmark.py</code> | 可复现的 CPU/Metal 耗时与合成任务质量报告 |
+| <code>examples/python-guide/metal_stage_benchmark.py</code> | 生成数据上的 Metal 旧路径／大叶节点预处理路径交错对照 |
 
 ## 扩展特征组的步骤
 
@@ -59,6 +60,7 @@ PYTHONPATH="$PWD/python-package" python3 examples/python-guide/metal_synthetic_b
 | 环境变量 | 用途 |
 | --- | --- |
 | <code>LGBM_METAL_PROFILE=1</code> | 记录学习器训练、分裂搜索、GPU inflight/等待、CPU 直方图、数据镜像、准备、合并与 dispatch 耗时 |
+| <code>LGBM_METAL_STAGE_SELECTED=0&#124;1&#124;2</code> | 选中行梯度预处理：0 关闭、1 所有叶节点、2 仅超过一个分片的大叶节点；默认 2 |
 | <code>LGBM_METAL_DISABLE_OVERLAP=1</code> | 串行执行 Metal 与 CPU 直方图计算，用于对照 |
 | <code>LGBM_METAL_FORCE_CPU=1</code> | 在 Metal 学习器中强制使用 CPU 直方图，便于诊断 |
 | <code>LGBM_METAL_COMPARE_HIST=1</code> | 将一个 GPU 直方图与 CPU 计算结果对照 |
@@ -71,7 +73,7 @@ PYTHONPATH="$PWD/python-package" python3 examples/python-guide/metal_synthetic_b
 | <code>LGBM_METAL_MIN_LEAF_ROWS=N</code> | 探索叶节点行数低于阈值时转 CPU |
 
 这些开关可能改变结果和耗时。公开基准会拒绝诊断覆盖项，使主报告速度比使用正常路径。profiling 应单独运行，并明确标注为诊断任务。
-<code>train</code> 计量树学习器内部的训练时间，不含 Python 数据生成、Dataset 构建与预测。<code>gpu_inflight</code> 是从提交后到 CPU 确认完成的墙钟时间，包含排队与执行；<code>gpu_execution</code> 累加 Metal 命令缓冲区报告的 GPU 执行时间，<code>gpu_timing_samples</code> 给出有效时间戳数量。<code>gpu_wait</code> 是 CPU 等待 GPU 完成的时间。GPU 与 CPU 直方图阶段可以重叠，不能把这些累计值相加为端到端耗时。计时与日志本身也可能影响性能，判断提速应使用关闭 profiling 的交错基准。
+<code>train</code> 计量树学习器内部的训练时间，不含 Python 数据生成、Dataset 构建与预测。<code>gpu_inflight</code> 是从提交后到 CPU 确认完成的墙钟时间，包含排队与执行；<code>gpu_execution</code> 累加 Metal 命令缓冲区报告的 GPU 执行时间，<code>gpu_timing_samples</code> 给出有效时间戳数量。开启 profiling 后还按叶节点选中行数记录各档 GPU 执行时间，用于定位大叶节点开销。<code>gpu_wait</code> 是 CPU 等待 GPU 完成的时间。GPU 与 CPU 直方图阶段可以重叠，不能把这些累计值相加为端到端耗时。计时与日志本身也可能影响性能，判断提速应使用关闭 profiling 的交错基准。
 
 ## 公开发布与可移植性
 

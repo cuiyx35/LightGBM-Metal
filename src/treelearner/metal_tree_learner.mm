@@ -9,6 +9,7 @@
 #include <LightGBM/utils/log.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -39,6 +40,7 @@ struct MetalParams {
   float hessian_scale;
   uint32_t threads_per_group;
   uint32_t compact_groups;
+  uint32_t stage_selected;
 };
 
 const char* kMetalSource = R"METAL(
@@ -55,7 +57,25 @@ struct MetalParams {
   float hessian_scale;
   uint threads_per_group;
   uint compact_groups;
+  uint stage_selected;
 };
+
+// Quantize selected rows once so every eligible feature group reads the same
+// contiguous integer gradients and Hessians. The original scale and rounding
+// are retained, preserving the per-bin integer histogram exactly.
+kernel void lightgbm_stage_selected_gradients(
+    device const float* gradients [[buffer(0)]],
+    device const float* hessians [[buffer(1)]],
+    device const uint* row_indices [[buffer(2)]],
+    device int* selected_gradient [[buffer(3)]],
+    device int* selected_hessian [[buffer(4)]],
+    constant MetalParams& params [[buffer(5)]],
+    uint selected_index [[thread_position_in_grid]]) {
+  if (selected_index >= params.selected_rows) return;
+  const uint row = row_indices[selected_index];
+  selected_gradient[selected_index] = int(rint(gradients[row] * params.gradient_scale));
+  selected_hessian[selected_index] = int(rint(hessians[row] * params.hessian_scale));
+}
 
 kernel void lightgbm_histogram_grouped(
     device const uchar* feature_bins [[buffer(0)]],
@@ -67,6 +87,8 @@ kernel void lightgbm_histogram_grouped(
     device long* hessian_hist [[buffer(6)]],
     constant MetalParams& params [[buffer(7)]],
     device const uint* active_groups [[buffer(8)]],
+    device const int* selected_gradient [[buffer(9)]],
+    device const int* selected_hessian [[buffer(10)]],
     uint3 group_position [[threadgroup_position_in_grid]],
     uint thread_index [[thread_index_in_threadgroup]]) {
   const uint feature = params.compact_groups ? active_groups[group_position.x] : group_position.x;
@@ -103,10 +125,12 @@ kernel void lightgbm_histogram_grouped(
       if (selected_index < params.selected_rows) {
         const uint row = row_indices[selected_index];
         const uint bin = feature_bins[feature * params.matrix_rows + row];
-        atomic_fetch_add_explicit(&chunk_gradient[bin],
-            int(rint(gradients[row] * params.gradient_scale)), memory_order_relaxed);
-        atomic_fetch_add_explicit(&chunk_hessian[bin],
-            int(rint(hessians[row] * params.hessian_scale)), memory_order_relaxed);
+        const int gradient = params.stage_selected ? selected_gradient[selected_index] :
+            int(rint(gradients[row] * params.gradient_scale));
+        const int hessian = params.stage_selected ? selected_hessian[selected_index] :
+            int(rint(hessians[row] * params.hessian_scale));
+        atomic_fetch_add_explicit(&chunk_gradient[bin], gradient, memory_order_relaxed);
+        atomic_fetch_add_explicit(&chunk_hessian[bin], hessian, memory_order_relaxed);
       }
     }
     threadgroup_barrier(mem_flags::mem_threadgroup);
@@ -157,6 +181,13 @@ class MetalHistogramEngine {
   MetalHistogramEngine() {
     const char* profile = std::getenv("LGBM_METAL_PROFILE");
     profile_enabled_ = profile != nullptr && std::strcmp(profile, "1") == 0;
+    const char* stage_selected = std::getenv("LGBM_METAL_STAGE_SELECTED");
+    if (stage_selected != nullptr && std::strcmp(stage_selected, "0") != 0 &&
+        std::strcmp(stage_selected, "1") != 0 && std::strcmp(stage_selected, "2") != 0) {
+      Log::Fatal("LGBM_METAL_STAGE_SELECTED must be 0, 1, or 2");
+    }
+    stage_selected_mode_ = stage_selected == nullptr ? 2u :
+        static_cast<uint32_t>(std::atoi(stage_selected));
     const char* rows_per_chunk = std::getenv("LGBM_METAL_ROWS_PER_CHUNK");
     if (rows_per_chunk != nullptr) {
       char* end = nullptr;
@@ -238,6 +269,14 @@ class MetalHistogramEngine {
     if (!pipeline_) {
       Log::Fatal("Metal pipeline creation failed: %s", ErrorDescription(error).c_str());
     }
+    if (stage_selected_mode_ != 0) {
+      id<MTLFunction> stage_function = [library newFunctionWithName:@"lightgbm_stage_selected_gradients"];
+      if (!stage_function) Log::Fatal("Metal gradient staging function is missing");
+      stage_pipeline_ = [device_ newComputePipelineStateWithFunction:stage_function error:&error];
+      if (!stage_pipeline_) Log::Fatal("Metal gradient staging pipeline creation failed: %s", ErrorDescription(error).c_str());
+      stage_threads_ = std::min<uint32_t>(256, [stage_pipeline_ maxTotalThreadsPerThreadgroup]);
+      if (stage_threads_ == 0) Log::Fatal("Metal gradient staging pipeline has no available threads");
+    }
     queue_ = [device_ newCommandQueue];
     if (!queue_) {
       Log::Fatal("Metal command queue creation failed");
@@ -249,15 +288,22 @@ class MetalHistogramEngine {
   ~MetalHistogramEngine() {
     if (inflight_command_) [inflight_command_ waitUntilCompleted];
     if (profile_enabled_) {
-      Log::Info("Metal profile: setup=%.6fs mirror=%.6fs gradients=%.6fs preparation=%.6fs gpu_inflight=%.6fs gpu_execution=%.6fs gpu_timing_samples=%llu gpu_wait=%.6fs merge=%.6fs dispatches=%llu threadgroups=%llu rows_per_shard=%u threads_per_group=%u compact_groups=%u allocated=%.1fMiB",
+      Log::Info("Metal profile: setup=%.6fs mirror=%.6fs gradients=%.6fs preparation=%.6fs gpu_inflight=%.6fs gpu_execution=%.6fs gpu_timing_samples=%llu gpu_wait=%.6fs merge=%.6fs dispatches=%llu threadgroups=%llu rows_per_shard=%u threads_per_group=%u compact_groups=%u stage_selected=%u allocated=%.1fMiB",
                 setup_seconds_, mirror_seconds_, gradient_seconds_, preparation_seconds_,
                 gpu_inflight_seconds_, gpu_execution_seconds_,
                 static_cast<unsigned long long>(gpu_timing_samples_),
                 gpu_wait_seconds_, merge_seconds_,
                 static_cast<unsigned long long>(dispatches_),
                 static_cast<unsigned long long>(threadgroups_), rows_per_shard_, threads_per_group_,
-                compact_groups_ ? 1u : 0u,
+                compact_groups_ ? 1u : 0u, stage_selected_mode_,
                 double(buffer_bytes_) / (1024.0 * 1024.0));
+      constexpr const char* kBucketLabels[] = {"<=4096", "4097-32768", "32769-262144", "262145-1048576", ">1048576"};
+      for (size_t bucket = 0; bucket < gpu_rows_bucket_count_.size(); ++bucket) {
+        Log::Info("Metal profile rows=%s dispatches=%llu gpu_execution=%.6fs",
+                  kBucketLabels[bucket],
+                  static_cast<unsigned long long>(gpu_rows_bucket_count_[bucket]),
+                  gpu_rows_bucket_seconds_[bucket]);
+      }
     }
   }
 
@@ -267,6 +313,8 @@ class MetalHistogramEngine {
     matrix_ = nil;
     gradient_ = nil;
     hessian_ = nil;
+    selected_gradient_ = nil;
+    selected_hessian_ = nil;
     indices_ = nil;
     mask_ = nil;
     active_groups_ = nil;
@@ -293,6 +341,12 @@ class MetalHistogramEngine {
                                    options:MTLResourceStorageModeShared];
     hessian_ = [device_ newBufferWithLength:uint64_t(rows_) * sizeof(float)
                                   options:MTLResourceStorageModeShared];
+    if (stage_selected_mode_ != 0) {
+      selected_gradient_ = [device_ newBufferWithLength:uint64_t(rows_) * sizeof(int32_t)
+                                              options:MTLResourceStorageModePrivate];
+      selected_hessian_ = [device_ newBufferWithLength:uint64_t(rows_) * sizeof(int32_t)
+                                             options:MTLResourceStorageModePrivate];
+    }
     indices_ = [device_ newBufferWithLength:uint64_t(rows_) * sizeof(uint32_t)
                                   options:MTLResourceStorageModeShared];
     mask_ = [device_ newBufferWithLength:groups_ options:MTLResourceStorageModeShared];
@@ -300,13 +354,16 @@ class MetalHistogramEngine {
                                       options:MTLResourceStorageModeShared];
     output_gradient_ = [device_ newBufferWithLength:output_bytes options:MTLResourceStorageModeShared];
     output_hessian_ = [device_ newBufferWithLength:output_bytes options:MTLResourceStorageModeShared];
-    if (!matrix_ || !gradient_ || !hessian_ || !indices_ || !mask_ || !active_groups_ ||
+    if (!matrix_ || !gradient_ || !hessian_ ||
+        (stage_selected_mode_ != 0 && (!selected_gradient_ || !selected_hessian_)) ||
+        !indices_ || !mask_ || !active_groups_ ||
         !output_gradient_ || !output_hessian_) {
       Log::Warning("Metal buffer allocation failed; using CPU");
       return false;
     }
     buffer_bytes_ = matrix_elements + uint64_t(rows_) * (sizeof(float) * 2 + sizeof(uint32_t)) +
-                    groups_ + uint64_t(groups_) * sizeof(uint32_t) + output_bytes * 2;
+                    groups_ + uint64_t(groups_) * sizeof(uint32_t) + output_bytes * 2 +
+                    (stage_selected_mode_ != 0 ? uint64_t(rows_) * sizeof(int32_t) * 2 : 0);
 
     std::vector<std::unique_ptr<BinIterator>> iterators;
     iterators.reserve(groups_);
@@ -390,11 +447,28 @@ class MetalHistogramEngine {
         if (group_mask[group]) active_groups[launched_groups++] = group;
       }
     }
+    // Small leaves avoid a second compute pass; large leaves amortize it over
+    // many feature-group histograms.
+    const bool stage_this_build = stage_selected_mode_ == 1 ||
+        (stage_selected_mode_ == 2 && selected_rows > rows_per_shard_);
     const MetalParams params{static_cast<uint32_t>(selected_rows), groups_, rows_,
                              rows_per_shard_, rows_per_chunk_,
                              gradient_scale_, hessian_scale_, threads_per_group_,
-                             compact_groups_ ? 1u : 0u};
+                             compact_groups_ ? 1u : 0u, stage_this_build ? 1u : 0u};
     id<MTLCommandBuffer> command = [queue_ commandBuffer];
+    if (stage_this_build) {
+      id<MTLComputeCommandEncoder> stage = [command computeCommandEncoder];
+      [stage setComputePipelineState:stage_pipeline_];
+      [stage setBuffer:gradient_ offset:0 atIndex:0];
+      [stage setBuffer:hessian_ offset:0 atIndex:1];
+      [stage setBuffer:indices_ offset:0 atIndex:2];
+      [stage setBuffer:selected_gradient_ offset:0 atIndex:3];
+      [stage setBuffer:selected_hessian_ offset:0 atIndex:4];
+      [stage setBytes:&params length:sizeof(params) atIndex:5];
+      [stage dispatchThreadgroups:MTLSizeMake((uint64_t(selected_rows) + stage_threads_ - 1) / stage_threads_, 1, 1)
+          threadsPerThreadgroup:MTLSizeMake(stage_threads_, 1, 1)];
+      [stage endEncoding];
+    }
     id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
     [encoder setComputePipelineState:pipeline_];
     [encoder setBuffer:matrix_ offset:0 atIndex:0];
@@ -406,6 +480,8 @@ class MetalHistogramEngine {
     [encoder setBuffer:output_hessian_ offset:0 atIndex:6];
     [encoder setBytes:&params length:sizeof(params) atIndex:7];
     [encoder setBuffer:active_groups_ offset:0 atIndex:8];
+    [encoder setBuffer:stage_this_build ? selected_gradient_ : gradient_ offset:0 atIndex:9];
+    [encoder setBuffer:stage_this_build ? selected_hessian_ : hessian_ offset:0 atIndex:10];
     if ([pipeline_ maxTotalThreadsPerThreadgroup] < threads_per_group_) {
       Log::Fatal("Metal device cannot run the requested histogram thread group");
     }
@@ -415,7 +491,8 @@ class MetalHistogramEngine {
     if (profile_enabled_) preparation_seconds_ += SecondsSince(preparation_start);
     [command commit];
     inflight_command_ = command;
-    if (profile_enabled_) threadgroups_ += uint64_t(launched_groups) * inflight_shards_;
+    if (profile_enabled_) threadgroups_ += uint64_t(launched_groups) * inflight_shards_ +
+        (stage_this_build ? (uint64_t(selected_rows) + stage_threads_ - 1) / stage_threads_ : 0);
     if (profile_enabled_) inflight_start_ = ProfileClock::now();
     return true;
     }
@@ -434,7 +511,13 @@ class MetalHistogramEngine {
       const double gpu_start = [inflight_command_ GPUStartTime];
       const double gpu_end = [inflight_command_ GPUEndTime];
       if (std::isfinite(gpu_start) && std::isfinite(gpu_end) && gpu_end > gpu_start) {
-        gpu_execution_seconds_ += gpu_end - gpu_start;
+        const double execution = gpu_end - gpu_start;
+        gpu_execution_seconds_ += execution;
+        const uint32_t rows = inflight_selected_rows_;
+        const size_t bucket = rows <= 4096 ? 0 : rows <= 32768 ? 1 :
+                              rows <= 262144 ? 2 : rows <= 1048576 ? 3 : 4;
+        ++gpu_rows_bucket_count_[bucket];
+        gpu_rows_bucket_seconds_[bucket] += execution;
         ++gpu_timing_samples_;
       }
     }
@@ -536,10 +619,13 @@ class MetalHistogramEngine {
  private:
   __strong id<MTLDevice> device_ = nil;
   __strong id<MTLComputePipelineState> pipeline_ = nil;
+  __strong id<MTLComputePipelineState> stage_pipeline_ = nil;
   __strong id<MTLCommandQueue> queue_ = nil;
   __strong id<MTLBuffer> matrix_ = nil;
   __strong id<MTLBuffer> gradient_ = nil;
   __strong id<MTLBuffer> hessian_ = nil;
+  __strong id<MTLBuffer> selected_gradient_ = nil;
+  __strong id<MTLBuffer> selected_hessian_ = nil;
   __strong id<MTLBuffer> indices_ = nil;
   __strong id<MTLBuffer> mask_ = nil;
   __strong id<MTLBuffer> active_groups_ = nil;
@@ -558,6 +644,8 @@ class MetalHistogramEngine {
   uint32_t rows_per_shard_ = kDefaultRowsPerShard;
   uint32_t threads_per_group_ = 64;
   bool compact_groups_ = true;
+  uint32_t stage_selected_mode_ = 0;
+  uint32_t stage_threads_ = 0;
   int verify_quantized_group_ = -1;
   uint64_t verify_quantized_dispatch_ = 1;
   uint64_t completed_builds_ = 0;
@@ -567,6 +655,8 @@ class MetalHistogramEngine {
   uint64_t dispatches_ = 0;
   uint64_t threadgroups_ = 0;
   uint64_t gpu_timing_samples_ = 0;
+  std::array<uint64_t, 5> gpu_rows_bucket_count_{};
+  std::array<double, 5> gpu_rows_bucket_seconds_{};
   double setup_seconds_ = 0.0;
   double mirror_seconds_ = 0.0;
   double gradient_seconds_ = 0.0;

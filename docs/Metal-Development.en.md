@@ -47,6 +47,7 @@ to be byte-identical.
 | `src/treelearner/metal_tree_learner.mm` | Eligibility, data mirror, GPU kernel, CPU/GPU overlap, merge, profiling |
 | `examples/python-guide/metal_validate.py` | Five synthetic model-level checks |
 | `examples/python-guide/metal_synthetic_benchmark.py` | Reproducible CPU/Metal timing and synthetic quality report |
+| `examples/python-guide/metal_stage_benchmark.py` | Interleaved old/adaptive Metal comparison on generated data |
 
 ## Safe extension sequence
 
@@ -96,6 +97,7 @@ their keys, update examples and documentation together.
 | Environment variable | Purpose |
 | --- | --- |
 | `LGBM_METAL_PROFILE=1` | Log learner training, split search, GPU inflight/wait, CPU histogram, data mirror, setup, merge, and dispatch totals |
+| `LGBM_METAL_STAGE_SELECTED=0\|1\|2` | Selected-row gradient staging: 0 off, 1 every leaf, 2 leaves larger than one shard; default 2 |
 | `LGBM_METAL_DISABLE_OVERLAP=1` | Run Metal and CPU histogram work serially for a comparison |
 | `LGBM_METAL_FORCE_CPU=1` | Use CPU histograms through the Metal learner for diagnosis |
 | `LGBM_METAL_COMPARE_HIST=1` | Compare one GPU histogram with a CPU calculation |
@@ -115,7 +117,9 @@ Dataset construction, and prediction. `gpu_inflight` is wall time from command
 submission until the CPU observes completion, including queueing and execution.
 `gpu_execution` sums GPU execution times reported by Metal command buffers;
 `gpu_timing_samples` counts valid timestamps. `gpu_wait` is CPU time waiting for
-GPU completion. GPU and CPU histogram work can overlap, so do not sum these
+GPU completion. With profiling enabled, GPU execution is also grouped by
+selected leaf row count to locate large-leaf costs. GPU and CPU histogram work
+can overlap, so do not sum these
 cumulative stage totals into an end-to-end duration. Profiling
 and logging can also affect performance, so use interleaved runs with profiling
 disabled for speed comparisons.

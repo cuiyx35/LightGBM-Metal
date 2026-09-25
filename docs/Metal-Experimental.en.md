@@ -20,6 +20,13 @@ the standard CPU model path. Metal histogram sums use fixed-point
 quantization, so the resulting trees and predictions can differ from CPU
 training. Test application quality separately before deploying a model.
 
+By default, when a selected leaf exceeds one GPU shard (32,768 rows by
+default), the GPU gathers its gradients and Hessians into contiguous arrays
+and quantizes them once before feature-group histograms are built. Set
+`LGBM_METAL_STAGE_SELECTED=0` to use the earlier path, `1` to stage every
+leaf, or leave it unset / set it to `2` to stage only large leaves. This does
+not change how CPU feature groups are processed.
+
 ## Build and use
 
 Building needs macOS, Apple Silicon, a Metal-capable GPU, CMake, a C++
@@ -54,8 +61,10 @@ serialization use the usual LightGBM interfaces.
 [`examples/python-guide/metal_validate.py`](../examples/python-guide/metal_validate.py)
 runs five synthetic model-level cases: dense numeric, mixed missing/category/
 sparse features with bagging, multiple histogram shards, a constant
-Hessian CPU fallback, and CPU/GPU overlap versus serial execution. It checks
-CPU/Metal predictions, overlap, and model reload,
+Hessian CPU fallback, and CPU/GPU overlap versus serial execution. The
+multi-shard case also requires identical models and predictions from the
+large-leaf staging and legacy Metal paths. It checks CPU/Metal predictions,
+overlap, and model reload,
 then writes a JSON report. A failed check exits nonzero and writes
 `"status": "FAIL"`. This is a smoke test, not a rule requiring application
 models to reproduce CPU predictions exactly.
@@ -91,6 +100,12 @@ background load, and OpenMP configuration.
 
 One Apple M5 run of the full-scale preset and the five validation cases are
 recorded in [the public benchmark reports](../benchmarks/metal/README.en.md).
+
+To compare only the old Metal histogram path with the default large-leaf
+staging path, run `examples/python-guide/metal_stage_benchmark.py`. It
+alternates the two modes and checks model and prediction hashes. Its larger
+preset also requires `--full-scale`. This comparison does not produce a
+CPU/Metal speed ratio.
 
 This fork retains the upstream [MIT license](../LICENSE) and copyright
 notices; third-party submodules retain their own license files. Benchmark

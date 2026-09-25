@@ -42,9 +42,21 @@ def compare(
     params.update(extra or {})
     runs = {}
     predictions = {}
+    staged_model = None
     for device in ("cpu", "metal"):
         start = time.perf_counter()
-        model = lgb.train({**params, "device_type": device}, dataset, num_boost_round=rounds)
+        stage_override = name == "multiple_histogram_shards" and device == "metal"
+        original_stage = os.environ.get("LGBM_METAL_STAGE_SELECTED")
+        try:
+            if stage_override:
+                os.environ["LGBM_METAL_STAGE_SELECTED"] = "2"
+            model = lgb.train({**params, "device_type": device}, dataset, num_boost_round=rounds)
+        finally:
+            if stage_override:
+                if original_stage is None:
+                    os.environ.pop("LGBM_METAL_STAGE_SELECTED", None)
+                else:
+                    os.environ["LGBM_METAL_STAGE_SELECTED"] = original_stage
         fit_seconds = time.perf_counter() - start
         prediction = model.predict(x_held)
         predictions[device] = prediction
@@ -54,6 +66,8 @@ def compare(
             "metric": float(metric),
             "trees": model.num_trees(),
         }
+        if stage_override:
+            staged_model = model
         if name == "dense_numeric" and device == "metal":
             with tempfile.TemporaryDirectory(prefix="lgbm-metal-test-") as tmp:
                 path = Path(tmp) / "model.txt"
@@ -79,6 +93,22 @@ def compare(
         "max_prediction_difference": max_difference,
         "mean_prediction_difference": float(difference.mean()),
     }
+    if staged_model is not None:
+        original_stage = os.environ.get("LGBM_METAL_STAGE_SELECTED")
+        try:
+            os.environ["LGBM_METAL_STAGE_SELECTED"] = "0"
+            legacy_model = lgb.train({**params, "device_type": "metal"}, dataset, num_boost_round=rounds)
+        finally:
+            if original_stage is None:
+                os.environ.pop("LGBM_METAL_STAGE_SELECTED", None)
+            else:
+                os.environ["LGBM_METAL_STAGE_SELECTED"] = original_stage
+        model_equal = staged_model.model_to_string() == legacy_model.model_to_string()
+        stage_difference = float(np.max(np.abs(predictions["metal"] - legacy_model.predict(x_held))))
+        if not model_equal or stage_difference != 0.0:
+            raise AssertionError(f"staging changed model or predictions: {stage_difference}")
+        result["staged_versus_legacy_model_equal"] = model_equal
+        result["staged_versus_legacy_max_prediction_difference"] = stage_difference
     print("CASE " + json.dumps(result), flush=True)
     return result
 

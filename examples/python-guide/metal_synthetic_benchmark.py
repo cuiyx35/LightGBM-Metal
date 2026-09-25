@@ -131,6 +131,7 @@ def main() -> None:
         "LGBM_METAL_ROWS_PER_CHUNK",
         "LGBM_METAL_COMPACT_GROUPS",
         "LGBM_METAL_MIN_LEAF_ROWS",
+        "LGBM_METAL_STAGE_SELECTED",
     ):
         if key in os.environ:
             parser.error(f"Unset diagnostic/override variable {key}")

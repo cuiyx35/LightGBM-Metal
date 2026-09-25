@@ -8,6 +8,8 @@
 
 Metal 路径为符合条件的特征组计算直方图。CPU 同时计算其他特征组，再执行分裂搜索及其余建树步骤。当前符合条件的组必须只含一个特征、不是 multi-value 组、bin 数不超过 256。预测使用标准 CPU 模型路径。Metal 直方图采用定点量化，树结构与预测可能不同于纯 CPU 训练；部署前应单独验证应用场景中的模型质量。
 
+默认情况下，选中行数超过一个 GPU 分片（默认 32,768 行）时，GPU 会先将这些行的梯度和 Hessian 聚成连续数组并量化一次，再供各特征组构建直方图。可设置 <code>LGBM_METAL_STAGE_SELECTED=0</code> 使用原先路径，或设置为 <code>1</code> 对所有叶节点执行预处理；不设置或设为 <code>2</code> 则只预处理大叶节点。这个选择不会改变 CPU 特征组的计算方式。
+
 ## 构建与使用
 
 需要 Apple Silicon macOS、支持 Metal 的 GPU、CMake、C++ 工具链，以及用于 CPU 并行训练的 OpenMP 运行时。Python 基准和验证脚本还需要 NumPy、SciPy、pandas、scikit-learn、narwhals。使用 Homebrew 的典型步骤：
@@ -31,7 +33,7 @@ model.save_model("model.txt")
 
 ## 可脚本化的模型验证
 
-[<code>examples/python-guide/metal_validate.py</code>](../examples/python-guide/metal_validate.py)在生成数据上运行五类模型级检查：稠密数值特征；带缺失值、类别、稀疏特征和 bagging 的混合输入；多直方图分片；常数 Hessian 情形下的 CPU 回退；CPU/GPU 并发与串行执行对照。脚本检查 CPU/Metal 预测、并发结果和模型重载，写出 JSON 报告；检查失败时退出码非零，并写入 <code>"status": "FAIL"</code>。这是冒烟测试，不要求应用模型的预测与 CPU 完全一致。
+[<code>examples/python-guide/metal_validate.py</code>](../examples/python-guide/metal_validate.py)在生成数据上运行五类模型级检查：稠密数值特征；带缺失值、类别、稀疏特征和 bagging 的混合输入；多直方图分片；常数 Hessian 情形下的 CPU 回退；CPU/GPU 并发与串行执行对照。多分片用例还要求大叶节点预处理与旧 Metal 路径生成完全相同的模型和预测。脚本检查 CPU/Metal 预测、并发结果和模型重载，写出 JSON 报告；检查失败时退出码非零，并写入 <code>"status": "FAIL"</code>。这是冒烟测试，不要求应用模型的预测与 CPU 完全一致。
 
 ~~~bash
 python examples/python-guide/metal_validate.py --output metal_validation.json
@@ -49,5 +51,7 @@ python examples/python-guide/metal_synthetic_benchmark.py \
 小规模冒烟测试省略 <code>--full-scale</code> 即可。完整规模需要较多统一内存；仅源码矩阵就约占 2 GiB。即使行数和特征数相同，生成数据的特征分布、特征捆绑、缺失模式和标签关系也会与真实应用不同。质量指标只对应这个生成任务。速度还取决于芯片型号、温度、后台负载和 OpenMP 配置。
 
 一台 Apple M5 的完整规模结果及五项验证结果见[公开基准报告](../benchmarks/metal/README.md)。
+
+如需只比较 Metal 的旧直方图路径与默认的大叶节点预处理路径，可运行 <code>examples/python-guide/metal_stage_benchmark.py</code>；它交错运行两种模式并核对模型及预测哈希，完整规模同样需要显式指定 <code>--full-scale</code>。这项对照不会给出 CPU/Metal 加速比。
 
 本分支保留上游 [MIT 许可证](../LICENSE)及版权声明，第三方子模块保留各自许可文件。发布基准结果时，应同时说明确切提交、硬件、配置、运行顺序，以及是否计入数据构建时间。

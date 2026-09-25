@@ -10,10 +10,16 @@
 | [模型级验证](m5_validation.json) | 五项小规模合成数据测试 | 全部通过 |
 | [瓶颈剖析](m5_profile_3m_100trees.json) | 330 万训练行、100 棵树、6 线程、开启 profiling | GPU 命令在途累计 16.14 秒；CPU 等待 GPU 累计 12.92 秒 |
 | [GPU 执行时间复核](m5_gpu_execution_3m_100trees.json) | 相同配置的新一次诊断运行 | Metal 报告 GPU 实际执行累计 14.58 秒；命令在途累计 15.87 秒 |
+| [大叶节点梯度预处理对照](m5_stage_selected_3m_100trees.json) | 330 万训练行、20 万生成数据留出行、512 个特征、100 棵树、6 线程；旧／新 Metal 路径交错运行 | 旧／新训练时间中位数之比 **1.27 倍**；模型与预测哈希相同 |
+| [当前版本 CPU/Metal 对照](m5_current_3m_100trees_cpu_metal.json) | 330 万训练行、20 万生成数据留出行、512 个特征、100 棵树、6 线程；Metal/CPU 交错运行 | CPU/Metal 训练时间中位数之比 **1.67 倍** |
 
 完整规模测试按固定种子生成所有特征和标签，其中有 150 个稠密数值特征和 362 个稀有二元特征。CPU 和 Metal 分别进行一棵树的预热后，运行顺序是 **Metal → CPU → CPU → Metal**。训练耗时（秒）为 Metal **108.00 / 125.67**，CPU **178.93 / 183.50**。训练加预测的中位数为 Metal **121.35** 秒、CPU **185.85** 秒，比值为 **1.53 倍**。一次性数据生成和 Dataset 构建耗时 **21.72** 秒，不计入各后端单次耗时；若将同一份共用成本分别加入两个后端，估算整体比值为 **1.45 倍**。进程峰值 RSS 为 **9.72 GiB**。
 
 每个后端重复运行得到的模型和预测哈希各自一致。在生成数据的留出预测上，Metal/CPU 最大差值为 **1.86e-6**，AP 差值为 **2.07e-9**。这些数字不能说明应用模型的质量或预测差异。生成数据没有再现真实的特征分布、缺失模式、类别值和标签关系。结果只有一个芯片、一个随机种子、每个后端两次运行；温度和后台负载可能改变耗时。模型级验证的耗时不是性能基准。
+
+上面的 500 棵树 CPU/Metal 比值来自优化前的 <code>7807af1</code>，不是当前分支的 500 棵树速度测量。当前分支默认只在选中行数超过一个分片时，先由 GPU 聚合并量化梯度与 Hessian。新增的 Metal 对照使用固定种子的生成数据，顺序是**旧→新→新→旧**，训练秒数分别为 **21.945 / 17.528 / 17.697 / 22.851**；旧／新中位耗时分别为 **22.398 / 17.612** 秒，旧／新比值约 **1.27**。这是同一 Metal 模型的两种计算路径对照，不是新的 CPU/Metal 加速比；没有包含数据生成、Dataset 构建和预测时间。两种路径在这份生成数据上的模型文本与留出预测哈希完全相同。机器温度与后台任务仍可能改变结果。
+
+当前版本的 100 棵树 CPU/Metal 对照复用相同生成器与 Dataset，顺序为 **Metal→CPU→CPU→Metal**。训练秒数为 Metal **17.253/18.225**、CPU **28.941/30.296**；训练中位 **17.739/29.618** 秒，比值约 **1.67**。训练加预测中位比值约 **1.66**。生成数据留出预测的 Metal/CPU 最大差 **3.17e-6**，超过 0.001 的条数为零。它与上面的 500 棵树测试轮数及留出集大小不同，不应用两个比值推断跨版本提速；两者都不能说明真实应用模型的质量。
 
 使用当前分支的 Python 包和启用 Metal 的原生库构建后，可按以下命令复现：
 
@@ -22,6 +28,12 @@ python examples/python-guide/metal_validate.py \
   --output metal_validation.json
 python examples/python-guide/metal_synthetic_benchmark.py \
   --full-scale --output metal_synthetic_benchmark.json
+python examples/python-guide/metal_stage_benchmark.py \
+  --full-scale --output metal_stage_benchmark.json
+python examples/python-guide/metal_synthetic_benchmark.py \
+  --train-rows 3300000 --held-rows 200000 --features 512 \
+  --dense-features 150 --rounds 100 --threads 6 --repeats 2 \
+  --output metal_current_cpu_metal.json
 ~~~
 
 脚本只写出汇总 JSON 和哈希；本目录不包含外部数据文件或逐行预测。
