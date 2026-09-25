@@ -51,6 +51,8 @@ python examples/python-guide/metal_synthetic_benchmark.py \
   --full-scale --output synthetic_metal_result.json
 ~~~
 
+要比较训练参数，可指定 <code>--max-bin</code>、<code>--num-leaves</code> 或 <code>--feature-fraction</code>；启用行采样时需同时设置 <code>--bagging-fraction</code> 和 <code>--bagging-freq</code>。脚本会记录配置、Dataset 构建时间、CPU/Metal 耗时与生成数据指标。不同配置的模型质量需另行验证。
+
 ## Star History
 
 <a href="https://www.star-history.com/?repos=cuiyx35%2FLightGBM-Metal&type=date&legend=top-left">

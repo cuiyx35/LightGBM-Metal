@@ -51,6 +51,8 @@ python examples/python-guide/metal_synthetic_benchmark.py \
   --full-scale --output synthetic_metal_result.json
 ~~~
 
+For parameter comparisons, set <code>--max-bin</code>, <code>--num-leaves</code>, or <code>--feature-fraction</code>. To enable row sampling, set both <code>--bagging-fraction</code> and <code>--bagging-freq</code>. The script records the configuration, Dataset construction time, CPU/Metal timing, and generated-data metrics. Model quality under a new configuration requires separate validation.
+
 ## Star History
 
 <a href="https://www.star-history.com/?repos=cuiyx35%2FLightGBM-Metal&type=date&legend=top-left">

@@ -81,6 +81,11 @@ def main() -> None:
     parser.add_argument("--rounds", type=int)
     parser.add_argument("--threads", type=int)
     parser.add_argument("--repeats", type=int, choices=(1, 2))
+    parser.add_argument("--max-bin", type=int, default=127)
+    parser.add_argument("--num-leaves", type=int, default=63)
+    parser.add_argument("--feature-fraction", type=float, default=0.8)
+    parser.add_argument("--bagging-fraction", type=float, default=1.0)
+    parser.add_argument("--bagging-freq", type=int, default=0)
     parser.add_argument("--seed", type=int, default=20260924)
     parser.add_argument("--positive-rate", type=float, default=0.05)
     parser.add_argument("--output", type=Path, default=Path("metal_synthetic_benchmark.json"))
@@ -117,6 +122,12 @@ def main() -> None:
         or args.rounds < 1
         or args.threads < 1
         or not 0 < args.positive_rate < 0.5
+        or not 2 <= args.max_bin <= 255
+        or not 2 <= args.num_leaves <= 255
+        or not 0 < args.feature_fraction <= 1
+        or not 0 < args.bagging_fraction <= 1
+        or args.bagging_freq < 0
+        or (args.bagging_fraction < 1 and args.bagging_freq == 0)
     ):
         parser.error("Invalid workload dimensions or class prevalence")
     for key in (
@@ -154,18 +165,21 @@ def main() -> None:
         "metric": "binary_logloss",
         "verbosity": 1,
         "learning_rate": 0.025,
-        "num_leaves": 63,
+        "num_leaves": args.num_leaves,
         "min_data_in_leaf": 35,
         "lambda_l2": 4.0,
-        "feature_fraction": 0.8,
-        "max_bin": 127,
+        "feature_fraction": args.feature_fraction,
+        "max_bin": args.max_bin,
         "num_threads": args.threads,
         "seed": args.seed,
         "force_col_wise": True,
     }
+    if args.bagging_freq > 0:
+        params["bagging_fraction"] = args.bagging_fraction
+        params["bagging_freq"] = args.bagging_freq
     start = time.perf_counter()
     dataset = lgb.Dataset(
-        x[: args.train_rows], label=labels[: args.train_rows], params={"max_bin": 127}, free_raw_data=True
+        x[: args.train_rows], label=labels[: args.train_rows], params={"max_bin": args.max_bin}, free_raw_data=True
     )
     dataset.construct()
     construct_seconds = time.perf_counter() - start
@@ -252,7 +266,7 @@ def main() -> None:
             "seed": args.seed,
             "positive_rate": args.positive_rate,
             "data_dtype": "uint8",
-            "max_bin": 127,
+            "max_bin": args.max_bin,
             "parameters": params,
         },
         "generate_seconds_shared": round(generate_seconds, 6),
