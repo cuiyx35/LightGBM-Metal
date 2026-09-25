@@ -56,6 +56,27 @@ model.save_model("model.txt")
 To return to the CPU path, set `device_type="cpu"`. Model prediction and
 serialization use the usual LightGBM interfaces.
 
+### Reuse a Dataset across fits
+
+When repeating fits on one training split, reuse the constructed Dataset to
+avoid repeated binning. The same Dataset can be passed to CPU or Metal fits:
+
+```python
+train_set = lgb.Dataset(X_train, label=y_train, params={"max_bin": 127})
+train_set.construct()
+
+for num_leaves in (31, 63):
+    params = {"objective": "binary", "device_type": "metal",
+              "num_threads": 6, "num_leaves": num_leaves}
+    model = lgb.train(params, train_set, num_boost_round=100)
+```
+
+Reuse requires identical training rows, feature order, categorical definitions,
+and binning parameters. Build a separate Dataset for each cross-validation
+split or `max_bin` value, with held-out data matched to that split. Keeping a
+Dataset alive uses memory. This saves preparation time; it need not make an
+individual fit faster.
+
 ## Scriptable validation
 
 [`examples/python-guide/metal_validate.py`](../examples/python-guide/metal_validate.py)

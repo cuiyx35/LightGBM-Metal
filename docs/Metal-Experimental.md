@@ -31,6 +31,22 @@ model.save_model("model.txt")
 
 返回 CPU 路径时设置 <code>device_type="cpu"</code>。预测和模型序列化仍使用 LightGBM 常规接口。
 
+### 重复实验复用 Dataset
+
+同一训练切分上反复训练时，分箱后的 Dataset 可复用，省去每次重新构建。CPU 与 Metal 可以使用同一个已构建的 Dataset：
+
+~~~python
+train_set = lgb.Dataset(X_train, label=y_train, params={"max_bin": 127})
+train_set.construct()
+
+for num_leaves in (31, 63):
+    params = {"objective": "binary", "device_type": "metal",
+              "num_threads": 6, "num_leaves": num_leaves}
+    model = lgb.train(params, train_set, num_boost_round=100)
+~~~
+
+复用要求训练行、特征顺序、类别定义及分箱参数一致。更换交叉验证切分或 <code>max_bin</code> 时分别构建 Dataset；留出集也应按对应切分创建。常驻 Dataset 会增加内存占用。收益来自减少准备时间，单次模型训练本身不一定变快。
+
 ## 可脚本化的模型验证
 
 [<code>examples/python-guide/metal_validate.py</code>](../examples/python-guide/metal_validate.py)在生成数据上运行五类模型级检查：稠密数值特征；带缺失值、类别、稀疏特征和 bagging 的混合输入；多直方图分片；常数 Hessian 情形下的 CPU 回退；CPU/GPU 并发与串行执行对照。多分片用例还要求大叶节点预处理与旧 Metal 路径生成完全相同的模型和预测。脚本检查 CPU/Metal 预测、并发结果和模型重载，写出 JSON 报告；检查失败时退出码非零，并写入 <code>"status": "FAIL"</code>。这是冒烟测试，不要求应用模型的预测与 CPU 完全一致。

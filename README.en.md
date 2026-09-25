@@ -34,6 +34,7 @@ PYTHONPATH="$PWD/python-package" python3 examples/python-guide/metal_synthetic_b
 ~~~
 
 Set <code>device_type="metal"</code> to train with Metal, or <code>device_type="cpu"</code> for the CPU path.
+For repeated fits with the same training rows, feature order, categorical definitions, and binning parameters, construct one <code>lightgbm.Dataset</code> and reuse it with <code>lightgbm.train()</code>. Rebuild it when changing <code>max_bin</code> or the cross-validation split. See the [usage example](docs/Metal-Experimental.en.md#reuse-a-dataset-across-fits).
 
 ## Public benchmark
 

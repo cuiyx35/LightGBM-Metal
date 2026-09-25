@@ -34,6 +34,7 @@ PYTHONPATH="$PWD/python-package" python3 examples/python-guide/metal_synthetic_b
 ~~~
 
 使用 Metal 训练时设置 <code>device_type="metal"</code>；返回 CPU 路径设置 <code>device_type="cpu"</code>。
+连续比较多个训练配置时，可先构建一次 <code>lightgbm.Dataset</code> 并重复传给 <code>lightgbm.train()</code>，省去重复分箱。仅对训练行、特征顺序、类别定义和分箱参数相同的实验复用；改变 <code>max_bin</code> 或交叉验证切分时需重建。示例见[实验使用说明](docs/Metal-Experimental.md#重复实验复用-dataset)。
 
 ## 公开测试结果
 
