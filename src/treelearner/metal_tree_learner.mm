@@ -385,6 +385,31 @@ class MetalHistogramEngine {
         matrix[uint64_t(feature) * rows_ + row] = static_cast<uint8_t>(bin);
       }
     }
+    const char* profile_bins = std::getenv("LGBM_METAL_PROFILE_BINS");
+    if (profile_bins != nullptr && std::strcmp(profile_bins, "0") != 0) {
+      uint32_t groups_above_80 = 0;
+      uint32_t groups_above_90 = 0;
+      uint32_t groups_above_95 = 0;
+      uint32_t groups_above_99 = 0;
+      for (uint32_t feature = 0; feature < groups_; ++feature) {
+        std::array<uint32_t, kBins> counts{};
+        const uint8_t* column = matrix + uint64_t(feature) * rows_;
+        for (uint32_t row = 0; row < rows_; ++row) ++counts[column[row]];
+        const uint32_t dominant_bin = static_cast<uint32_t>(
+            std::max_element(counts.begin(), counts.end()) - counts.begin());
+        const uint32_t dominant_count = counts[dominant_bin];
+        groups_above_80 += uint64_t(dominant_count) * 100 >= uint64_t(rows_) * 80;
+        groups_above_90 += uint64_t(dominant_count) * 100 >= uint64_t(rows_) * 90;
+        groups_above_95 += uint64_t(dominant_count) * 100 >= uint64_t(rows_) * 95;
+        groups_above_99 += uint64_t(dominant_count) * 100 >= uint64_t(rows_) * 99;
+        Log::Info("Metal bin concentration: group_slot=%u bins=%d dominant_bin=%u dominant_fraction=%.6f",
+                  feature, dataset->FeatureGroupNumBin(groups[feature]), dominant_bin,
+                  double(dominant_count) / rows_);
+      }
+      Log::Info("Metal bin concentration summary: groups=%u dominant_ge_80=%u dominant_ge_90=%u dominant_ge_95=%u dominant_ge_99=%u",
+                groups_, groups_above_80, groups_above_90, groups_above_95,
+                groups_above_99);
+    }
     active_ = true;
     if (profile_enabled_) mirror_seconds_ += SecondsSince(mirror_start);
     Log::Info("Metal mirrored %u rows and %u feature groups into a dense byte matrix", rows_, groups_);
