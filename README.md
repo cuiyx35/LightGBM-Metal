@@ -54,6 +54,12 @@ python examples/python-guide/metal_synthetic_benchmark.py \
 
 要比较训练参数，可指定 <code>--max-bin</code>、<code>--num-leaves</code> 或 <code>--feature-fraction</code>；启用行采样时需同时设置 <code>--bagging-fraction</code> 和 <code>--bagging-freq</code>。脚本会记录配置、Dataset 构建时间、CPU/Metal 耗时与生成数据指标。不同配置的模型质量需另行验证。
 
+## 优化进展
+
+截至 2026-09-25，当前 <code>main</code> 已包含 CPU/GPU 并行构造直方图、默认 32,768 行分片、64 线程组、只提交活跃特征组，以及大叶节点选中梯度预处理。上面的公开基准和[基准报告](benchmarks/metal/README.md)针对已合入的后端。重复拟合时复用相同 Dataset 的方法也已写入[使用说明](docs/Metal-Experimental.md#重复实验复用-dataset)。
+
+GPU 常驻建树及其中的类别分裂处理仍处于独立原型阶段，尚未接入当前后端；本轮新实验没有产生可合入的默认训练路径改动。
+
 ## Star History
 
 <a href="https://www.star-history.com/?repos=cuiyx35%2FLightGBM-Metal&type=date&legend=top-left">

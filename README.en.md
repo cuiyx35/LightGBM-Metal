@@ -54,6 +54,12 @@ python examples/python-guide/metal_synthetic_benchmark.py \
 
 For parameter comparisons, set <code>--max-bin</code>, <code>--num-leaves</code>, or <code>--feature-fraction</code>. To enable row sampling, set both <code>--bagging-fraction</code> and <code>--bagging-freq</code>. The script records the configuration, Dataset construction time, CPU/Metal timing, and generated-data metrics. Model quality under a new configuration requires separate validation.
 
+## Optimization status
+
+As of 2026-09-25, <code>main</code> includes concurrent CPU/GPU histogram construction, a default 32,768-row GPU shard, 64 threadgroups, dispatch of active feature groups only, and selected-gradient staging for large leaves. The results above and the [benchmark report](benchmarks/metal/README.md) cover the integrated backend. The [experimental guide](docs/Metal-Experimental.en.md) also explains how to reuse a Dataset across repeated fits.
+
+GPU-resident tree construction and its categorical split handling remain standalone prototypes. This round produced no further default training-path change ready for integration.
+
 ## Star History
 
 <a href="https://www.star-history.com/?repos=cuiyx35%2FLightGBM-Metal&type=date&legend=top-left">
