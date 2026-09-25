@@ -107,8 +107,8 @@
     "cpu_over_metal_fit_speedup": 1.6696486806286441,
     "cpu_over_metal_fit_plus_predict_speedup": 1.661972158282049,
     "metal_vs_cpu_prediction": {
-        "mean_absolute_difference": 2.3226171345775003e-09,
-        "maximum_absolute_difference": 3.1740565495930184e-06,
+        "mean_absolute_difference": 2.3226171345775003e-9,
+        "maximum_absolute_difference": 3.1740565495930184e-6,
         "count_above_0_001": 0,
         "count_above_0_01": 0
     },
