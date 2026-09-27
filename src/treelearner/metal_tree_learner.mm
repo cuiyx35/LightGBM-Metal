@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "metal_tree_learner.h"
+#include "metal_resident_tree.h"
 
 namespace LightGBM {
 
@@ -696,6 +697,11 @@ MetalTreeLearner::MetalTreeLearner(const Config* config)
     : SerialTreeLearner(config), engine_(new MetalHistogramEngine()) {
   const char* force_cpu = std::getenv("LGBM_METAL_FORCE_CPU");
   force_cpu_ = force_cpu != nullptr && std::strcmp(force_cpu, "1") == 0;
+  const char* resident = std::getenv("LGBM_METAL_RESIDENT");
+  if (resident != nullptr && std::strcmp(resident, "0") != 0 && std::strcmp(resident, "1") != 0) {
+    Log::Fatal("LGBM_METAL_RESIDENT must be 0 or 1");
+  }
+  resident_requested_ = !force_cpu_ && resident != nullptr && std::strcmp(resident, "1") == 0;
   const char* disable_overlap = std::getenv("LGBM_METAL_DISABLE_OVERLAP");
   disable_overlap_ = disable_overlap != nullptr && std::strcmp(disable_overlap, "1") == 0;
   const char* profile = std::getenv("LGBM_METAL_PROFILE");
@@ -730,6 +736,25 @@ MetalTreeLearner::~MetalTreeLearner() {
 
 Tree* MetalTreeLearner::Train(const score_t* gradients, const score_t* hessians,
                               bool is_first_tree) {
+  if (resident_) {
+    const std::string reason = forced_split_json_ != nullptr ? "forced splits" :
+        resident_->UnsupportedReason(*config_);
+    if (reason.empty()) {
+      gradients_ = gradients;
+      hessians_ = hessians;
+      SerialTreeLearner::BeforeTrain();
+      const auto start = ProfileClock::now();
+      Tree* result = resident_->Train(*config_, gradients, hessians,
+          col_sampler_.is_feature_used_bytree(), data_partition_.get());
+      if (profile_enabled_) { train_seconds_ += SecondsSince(start); ++train_calls_; }
+      return result;
+    }
+    if (!logged_resident_fallback_) {
+      Log::Warning("Metal resident tree fallback: %s; using the existing learner", reason.c_str());
+      logged_resident_fallback_ = true;
+    }
+    if (!force_cpu_ && !share_state_->is_constant_hessian && metal_groups_.empty()) BuildMirror();
+  }
   if (!profile_enabled_) {
     return SerialTreeLearner::Train(gradients, hessians, is_first_tree);
   }
@@ -754,14 +779,20 @@ void MetalTreeLearner::FindBestSplitsFromHistograms(
 
 void MetalTreeLearner::Init(const Dataset* train_data, bool is_constant_hessian) {
   SerialTreeLearner::Init(train_data, is_constant_hessian);
-  if (!force_cpu_ && !is_constant_hessian) BuildMirror();
+  if (resident_requested_) resident_.reset(new MetalResidentTreeEngine(train_data));
+  if (!resident_requested_ && !force_cpu_ && !is_constant_hessian) BuildMirror();
 }
 
 void MetalTreeLearner::ResetTrainingDataInner(const Dataset* train_data,
                                                bool is_constant_hessian,
                                                bool reset_multi_val_bin) {
   SerialTreeLearner::ResetTrainingDataInner(train_data, is_constant_hessian, reset_multi_val_bin);
-  if (!force_cpu_ && !is_constant_hessian) BuildMirror();
+  if (resident_requested_) {
+    resident_.reset(new MetalResidentTreeEngine(train_data));
+    metal_groups_.clear();
+    logged_resident_fallback_ = false;
+  }
+  if (!resident_requested_ && !force_cpu_ && !is_constant_hessian) BuildMirror();
 }
 
 void MetalTreeLearner::BuildMirror() {

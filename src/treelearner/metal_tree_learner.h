@@ -17,6 +17,7 @@
 namespace LightGBM {
 
 class MetalHistogramEngine;
+class MetalResidentTreeEngine;
 
 class MetalTreeLearner final : public SerialTreeLearner {
  public:
@@ -46,6 +47,9 @@ class MetalTreeLearner final : public SerialTreeLearner {
                            double leaf_hessian);
 
   std::unique_ptr<MetalHistogramEngine> engine_;
+  std::unique_ptr<MetalResidentTreeEngine> resident_;
+  bool resident_requested_ = false;
+  bool logged_resident_fallback_ = false;
   std::vector<int> metal_groups_;
   std::vector<int> group_to_slot_;
   std::vector<int> group_feature_count_;

@@ -79,6 +79,38 @@ class DataPartition {
     }
   }
 
+#ifdef USE_METAL
+  // Import the final partition of a device-resident tree, including bagged rows.
+  void SetLeafPartition(const data_size_t* indices, data_size_t count,
+                        const std::vector<data_size_t>& begins,
+                        const std::vector<data_size_t>& counts) {
+    CHECK_EQ(begins.size(), counts.size());
+    CHECK_LE(counts.size(), static_cast<size_t>(num_leaves_));
+    CHECK_LE(count, num_data_);
+    data_size_t total = 0;
+    std::vector<std::pair<data_size_t, data_size_t>> intervals;
+    for (size_t i = 0; i < counts.size(); ++i) {
+      CHECK_GE(begins[i], 0);
+      CHECK_GE(counts[i], 0);
+      CHECK_LE(begins[i], count - counts[i]);
+      total += counts[i];
+      intervals.emplace_back(begins[i], counts[i]);
+    }
+    CHECK_EQ(total, count);
+    std::sort(intervals.begin(), intervals.end());
+    data_size_t end = 0;
+    for (const auto& interval : intervals) {
+      CHECK_EQ(interval.first, end);
+      end += interval.second;
+    }
+    std::copy(indices, indices + count, indices_.begin());
+    std::fill(leaf_begin_.begin(), leaf_begin_.end(), 0);
+    std::fill(leaf_count_.begin(), leaf_count_.end(), 0);
+    std::copy(begins.begin(), begins.end(), leaf_begin_.begin());
+    std::copy(counts.begin(), counts.end(), leaf_count_.begin());
+  }
+#endif
+
   /*!
   * \brief Get the data indices of one leaf
   * \param leaf index of leaf
