@@ -1,0 +1,166 @@
+{
+    "status": "PASS",
+    "scope": "generated_data_resident_comparison",
+    "configuration": {
+        "train_rows": 3300000,
+        "held_rows": 200000,
+        "features": 512,
+        "dense_features": 150,
+        "rounds": 100,
+        "seed": 20260927,
+        "parameters": {
+            "objective": "binary",
+            "verbosity": 1,
+            "learning_rate": 0.05,
+            "lambda_l2": 4.0,
+            "num_leaves": 63,
+            "max_bin": 127,
+            "feature_fraction": 0.8,
+            "num_threads": 6,
+            "seed": 20260927,
+            "force_col_wise": true
+        }
+    },
+    "machine": {
+        "architecture": "arm64",
+        "macos": "27.0"
+    },
+    "native_library_sha256": "7e03843952df2c4cabde14d2eb6880995a569a7e3ad95997300335b55d9d9e38",
+    "source_files_sha256": {
+        "src/treelearner/metal_resident_tree.mm": "4358c0234c4ec94232f349d8de0b09d6304c3dbed58f3a504e9626d11131f0cc",
+        "src/treelearner/metal_tree_learner.mm": "b57a3a9df19a1fbbd5fde0927d0968a435a423b28bac47d1adae9ed7441c4902",
+        "CMakeLists.txt": "ec0dcb721cb9ad59623e969d8664991a92731680751c9a9256b7715c3eec1cde"
+    },
+    "runs": [
+        {
+            "backend": "resident",
+            "fit_seconds": 22.258090500021353,
+            "predict_seconds": 0.2416783749940805,
+            "auc": 0.9593204343754602,
+            "average_precision": 0.5879323975378076,
+            "log_loss": 0.10037685413559747,
+            "model_sha256": "d50d1505ecfde70b37823f9b98fb462a1fd40586939e930e378b5fefdd6ab5c5",
+            "prediction_sha256": "4da600128d8cecc0c982d26b7001b8cbafbe3cdfb8d450b217b702109e00727e"
+        },
+        {
+            "backend": "hybrid",
+            "fit_seconds": 19.056032166990917,
+            "predict_seconds": 0.24306366700329818,
+            "auc": 0.9595219160234009,
+            "average_precision": 0.5893122967307641,
+            "log_loss": 0.10012264223325092,
+            "model_sha256": "3cefbcfe733a52669273fd333780ca646d2a6d8180f8455d86c3fa209cb0a139",
+            "prediction_sha256": "0c1af62717a08aeecd1c9904247ed67038ae8e1d9494872b776320b9542feae7"
+        },
+        {
+            "backend": "cpu",
+            "fit_seconds": 33.41364474999136,
+            "predict_seconds": 0.2625347079883795,
+            "auc": 0.9595219160234009,
+            "average_precision": 0.5893122947013866,
+            "log_loss": 0.10012264221518617,
+            "model_sha256": "13d1c8f4960ae12fa7c78d08dde427e71d3520f8a3b13df8861f26ef4c01e785",
+            "prediction_sha256": "8a54ff2411e83547d390dae25ac4fba5d41f898853954d15baaad188f863b752"
+        },
+        {
+            "backend": "cpu",
+            "fit_seconds": 35.005992041988065,
+            "predict_seconds": 0.26193866701214574,
+            "auc": 0.9595219160234009,
+            "average_precision": 0.5893122947013866,
+            "log_loss": 0.10012264221518617,
+            "model_sha256": "13d1c8f4960ae12fa7c78d08dde427e71d3520f8a3b13df8861f26ef4c01e785",
+            "prediction_sha256": "8a54ff2411e83547d390dae25ac4fba5d41f898853954d15baaad188f863b752"
+        },
+        {
+            "backend": "hybrid",
+            "fit_seconds": 20.136009416979505,
+            "predict_seconds": 0.25178025002242066,
+            "auc": 0.9595219160234009,
+            "average_precision": 0.5893122967307641,
+            "log_loss": 0.10012264223325092,
+            "model_sha256": "3cefbcfe733a52669273fd333780ca646d2a6d8180f8455d86c3fa209cb0a139",
+            "prediction_sha256": "0c1af62717a08aeecd1c9904247ed67038ae8e1d9494872b776320b9542feae7"
+        },
+        {
+            "backend": "resident",
+            "fit_seconds": 24.389326500007883,
+            "predict_seconds": 0.23999341600574553,
+            "auc": 0.9593204343754602,
+            "average_precision": 0.5879323975378076,
+            "log_loss": 0.10037685413559747,
+            "model_sha256": "d50d1505ecfde70b37823f9b98fb462a1fd40586939e930e378b5fefdd6ab5c5",
+            "prediction_sha256": "4da600128d8cecc0c982d26b7001b8cbafbe3cdfb8d450b217b702109e00727e"
+        }
+    ],
+    "warmups": [
+        {
+            "backend": "cpu",
+            "seconds": 0.6610983750142623
+        },
+        {
+            "backend": "hybrid",
+            "seconds": 1.3293213339929935
+        },
+        {
+            "backend": "resident",
+            "seconds": 1.5086101659981068
+        }
+    ],
+    "limitations": [
+        "Generated distributions cannot establish application model quality.",
+        "Fit includes native initialization/mirroring and excludes the shared Dataset construction.",
+        "Peak RSS is the cumulative process maximum, not per-backend memory use.",
+        "One machine; temperature and GPU hardware counters are not measured.",
+        "Optional LGBM_BENCHMARK_GUARD_PREFIX checks competing process command lines before each fit."
+    ],
+    "source_commit": "c99b39f311f574f024c4e1dfc764faa54154caa0",
+    "source_dirty": true,
+    "load_average_before": [
+        3.80908203125,
+        3.9912109375,
+        3.5498046875
+    ],
+    "generate_seconds_shared": 15.595048332994338,
+    "dataset_construct_seconds_shared": 4.547228874987923,
+    "run_order": [
+        "resident",
+        "hybrid",
+        "cpu",
+        "cpu",
+        "hybrid",
+        "resident"
+    ],
+    "median_fit_seconds": {
+        "cpu": 34.209818395989714,
+        "hybrid": 19.59602079198521,
+        "resident": 23.323708500014618
+    },
+    "hybrid_over_resident_fit_ratio": 0.8401760291238818,
+    "cpu_over_resident_fit_ratio": 1.466740093924955,
+    "prediction_differences": {
+        "cpu": {
+            "maximum": 0.05736725665299508,
+            "mean": 0.0013339877152651668,
+            "fraction_above_0_001": 0.2251,
+            "fraction_above_0_01": 0.03304
+        },
+        "hybrid": {
+            "maximum": 0.05736725634712392,
+            "mean": 0.0013339877112130245,
+            "fraction_above_0_001": 0.2251,
+            "fraction_above_0_01": 0.03304
+        }
+    },
+    "peak_process_rss_gib": 6.039794921875,
+    "load_average_after": [
+        6.02294921875,
+        5.16796875,
+        4.12646484375
+    ],
+    "publication_notes": [
+        "Raw timing source was a dirty c99b39f checkout; the three recorded source file hashes match committed e0e85c4.",
+        "Apple M5, 32 GiB unified memory. Background system services and a VM were active; these are same-machine observations, not an idle-machine or cross-chip speed guarantee.",
+        "Resident fit median is slower than the existing hybrid; the default was not changed. No application validation was run for this candidate."
+    ]
+}

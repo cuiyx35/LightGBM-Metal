@@ -25,7 +25,7 @@ brew install cmake libomp
 bash tools/build-metal-macos.sh --validate
 ~~~
 
-脚本在 <code>build-metal/</code> 中构建，将原生库链接到本仓库的 Python 包；<code>--validate</code> 用生成数据检查五类模型级情形，将 JSON 写入 <code>build-metal/metal_validation.json</code>，失败时退出码非零。若 OpenMP 安装在其他位置，可设置 <code>OPENMP_PREFIX</code>；使用不同 Python 可设置 <code>PYTHON_BIN</code>。<code>bash tools/build-metal-macos.sh --help</code> 列出全部参数。GitHub Actions 的 [Metal macOS 检查](.github/workflows/metal_macos.yml)使用同一脚本在 Apple Silicon 托管运行器上构建并验证；它不运行性能基准。
+脚本在 <code>build-metal/</code> 中构建，将原生库链接到本仓库的 Python 包；<code>--validate</code> 检查默认协同路径及可选常驻建树路径，将 JSON 写入该目录中的 <code>metal_validation.json</code> 和 <code>metal_resident_validation.json</code>，失败时退出码非零。若 OpenMP 安装在其他位置，可设置 <code>OPENMP_PREFIX</code>；使用不同 Python 可设置 <code>PYTHON_BIN</code>。<code>bash tools/build-metal-macos.sh --help</code> 列出全部参数。GitHub Actions 的 [Metal macOS 检查](.github/workflows/metal_macos.yml)使用同一脚本在 Apple Silicon 托管运行器上构建并验证；它不运行性能基准。
 
 如需单独做小规模性能冒烟测试，先构建，然后执行：
 
@@ -58,7 +58,7 @@ python examples/python-guide/metal_synthetic_benchmark.py \
 
 截至 2026-09-25，当前 <code>main</code> 已包含 CPU/GPU 并行构造直方图、默认 32,768 行分片、64 线程组、只提交活跃特征组，以及大叶节点选中梯度预处理。上面的公开基准和[基准报告](benchmarks/metal/README.md)针对已合入的后端。重复拟合时复用相同 Dataset 的方法也已写入[使用说明](docs/Metal-Experimental.md#重复实验复用-dataset)。
 
-GPU 常驻建树及其中的类别分裂处理仍处于独立原型阶段，尚未接入当前后端；本轮新实验没有产生可合入的默认训练路径改动。
+2026-09-27 新增可选的 [GPU 常驻建树](docs/Metal-Resident.md)：设置 <code>LGBM_METAL_RESIDENT=1</code> 后，支持的树在一个 GPU 命令缓冲区中完成直方图、数值/类别分裂和行分区，并输出标准 LightGBM 模型。默认仍使用现有协同路径；适用范围、回退和验证入口见专门说明。
 
 ## Star History
 

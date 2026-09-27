@@ -29,6 +29,10 @@ not change how CPU feature groups are processed.
 
 ## Build and use
 
+Set <code>LGBM_METAL_RESIDENT=1</code> to try [GPU-resident trees](Metal-Resident.en.md),
+with separately documented coverage, fallback and numerics. Ordinary
+<code>device_type="metal"</code> continues to use the hybrid path described above.
+
 Building needs macOS, Apple Silicon, a Metal-capable GPU, CMake, a C++
 toolchain, and a working OpenMP runtime for parallel CPU training. The
 Python benchmark and validation scripts also need NumPy, SciPy, pandas,

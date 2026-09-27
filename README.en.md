@@ -25,7 +25,7 @@ brew install cmake libomp
 bash tools/build-metal-macos.sh --validate
 ~~~
 
-The script builds in <code>build-metal/</code> and links the native library into this checkout's Python package. <code>--validate</code> checks five model-level cases using generated data, writes <code>build-metal/metal_validation.json</code>, and exits nonzero on failure. Set <code>OPENMP_PREFIX</code> for a non-Homebrew OpenMP installation or <code>PYTHON_BIN</code> for another Python. Run <code>bash tools/build-metal-macos.sh --help</code> for all options. The [Metal macOS GitHub Actions check](.github/workflows/metal_macos.yml) uses the same script on an Apple Silicon hosted runner; it does not run a performance benchmark.
+The script builds in <code>build-metal/</code> and links the native library into this checkout's Python package. <code>--validate</code> checks the default hybrid and opt-in resident paths, writes <code>metal_validation.json</code> and <code>metal_resident_validation.json</code> in that directory, and exits nonzero on failure. Set <code>OPENMP_PREFIX</code> for a non-Homebrew OpenMP installation or <code>PYTHON_BIN</code> for another Python. Run <code>bash tools/build-metal-macos.sh --help</code> for all options. The [Metal macOS GitHub Actions check](.github/workflows/metal_macos.yml) uses the same script on an Apple Silicon hosted runner; it does not run a performance benchmark.
 
 For a separate small performance smoke test after building:
 
@@ -58,7 +58,7 @@ For parameter comparisons, set <code>--max-bin</code>, <code>--num-leaves</code>
 
 As of 2026-09-25, <code>main</code> includes concurrent CPU/GPU histogram construction, a default 32,768-row GPU shard, 64 threadgroups, dispatch of active feature groups only, and selected-gradient staging for large leaves. The results above and the [benchmark report](benchmarks/metal/README.md) cover the integrated backend. The [experimental guide](docs/Metal-Experimental.en.md) also explains how to reuse a Dataset across repeated fits.
 
-GPU-resident tree construction and its categorical split handling remain standalone prototypes. This round produced no further default training-path change ready for integration.
+An opt-in [GPU-resident tree path](docs/Metal-Resident.en.md) was added on 2026-09-27. With <code>LGBM_METAL_RESIDENT=1</code>, supported trees compute histograms, numerical/categorical splits and row partitions in one GPU command buffer, producing standard LightGBM models. The existing hybrid path remains the default; see the dedicated guide for scope, fallback and validation.
 
 ## Star History
 

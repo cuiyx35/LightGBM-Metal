@@ -13,6 +13,11 @@ the backend. Keep upstream LightGBM behavior unchanged when `USE_METAL=OFF`.
 - The Metal learner currently assigns whole feature groups to GPU or CPU.
   CPU and GPU build histograms concurrently; split search stays on CPU.
   Preserve that ownership rule when adding supported group types.
+- The opt-in <code>LGBM_METAL_RESIDENT=1</code> path expands all actual feature bins
+  and builds supported trees on GPU; unsupported configurations fall back for the
+  whole tree. See [resident trees](docs/Metal-Resident.en.md). Run
+  <code>metal_resident_validate.py</code> as well as the hybrid checks when changing
+  this path; use <code>metal_resident_benchmark.py</code> for timing comparisons.
 - Keep source, examples, and benchmark reports free of private datasets,
   private feature names, row-level predictions, credentials, and local paths.
   Retain upstream and third-party license notices.

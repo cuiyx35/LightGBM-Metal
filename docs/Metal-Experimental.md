@@ -12,6 +12,8 @@ Metal 路径为符合条件的特征组计算直方图。CPU 同时计算其他�
 
 ## 构建与使用
 
+默认路径之外，可设置 <code>LGBM_METAL_RESIDENT=1</code> 试用[GPU 常驻建树](Metal-Resident.md)。其特征覆盖、回退和数值实现独立说明；常规 <code>device_type="metal"</code> 仍使用上面的协同路径。
+
 需要 Apple Silicon macOS、支持 Metal 的 GPU、CMake、C++ 工具链，以及用于 CPU 并行训练的 OpenMP 运行时。Python 基准和验证脚本还需要 NumPy、SciPy、pandas、scikit-learn、narwhals。使用 Homebrew 的典型步骤：
 
 ~~~bash

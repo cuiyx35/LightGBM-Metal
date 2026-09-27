@@ -2,6 +2,38 @@
 
 [简体中文](README.md) · **English** · [Project home](../../README.en.md)
 
+## 2026-09-27: opt-in GPU-resident trees
+
+See the [usage and implementation guide](../../docs/Metal-Resident.en.md).
+[All 27 generated-data checks](resident_validation_20260927.json) passed, covering numerical/categorical/missing/sparse
+features, bagging, GOSS, fallback, model reload and continuation. Cached training scores agreed with fresh prediction.
+The largest CPU prediction difference across these small cases was about 0.000533; longer fits can differ more.
+
+The [raw 100-tree comparison](resident_100_20260927.json) used 3.3 million training rows, 200k generated holdout rows,
+512 features (150 dense), 63 leaves, 6 threads, learning rate 0.05 and L2=4. Each backend warmed up with one tree;
+the measured order was resident→hybrid→CPU→CPU→hybrid→resident. Fit includes initialization and mirroring;
+shared data generation and Dataset construction are recorded separately.
+
+| Backend | Two fits (seconds) | Median (seconds) | Holdout AP | Holdout AUC |
+| --- | --- | --- | --- | --- |
+| Resident GPU | 22.258 / 24.389 | 23.324 | 0.587932 | 0.959320 |
+| Default hybrid | 19.056 / 20.136 | 19.596 | 0.589312 | 0.959522 |
+| CPU | 33.414 / 35.006 | 34.210 | 0.589312 | 0.959522 |
+
+Resident median fit was about 1.47 times faster than CPU but 19% slower than the hybrid, so **hybrid remains the default**.
+Resident AP was 0.00138 lower, AUC 0.000201 lower and log loss about 0.254% higher than CPU.
+22.51% of holdout predictions differed by more than 0.001, 3.304% by more than 0.01; the maximum was about 0.0574.
+Repeated model and prediction hashes matched within each backend. Preset generated-data quality gates passed;
+application quality has not been accepted.
+
+These are observations from one M5. System services and a VM were active, timing drift occurred and temperature
+was not measured; they are not idle-machine or cross-chip speed guarantees. The three recorded source SHA-256 hashes
+match commit <code>e0e85c4</code>; the original run used an uncommitted <code>c99b39f</code> checkout.
+The report retains that source state and library hash. This result did not advance to application-data validation
+or change the default device.
+
+## Earlier hybrid backend results
+
 These reports were produced by the experimental Metal fork on an
 Apple M5 Mac with 32 GiB unified memory, connected to AC power. The Metal
 implementation in the scale benchmark and first profile used the source state

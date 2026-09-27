@@ -8,6 +8,7 @@
 
 - 主要入口为 <code>CMakeLists.txt</code>、<code>include/LightGBM/config.h</code>、<code>src/io/config.cpp</code>、<code>src/treelearner/tree_learner.cpp</code> 和 <code>src/treelearner/metal_tree_learner.{h,mm}</code>。
 - Metal 学习器按**整个特征组**决定交给 GPU 还是 CPU。CPU 与 GPU 并发构造直方图，分裂搜索仍在 CPU 上。扩展支持的组类型时，保留这一所有权规则。
+- 可选常驻路径 <code>LGBM_METAL_RESIDENT=1</code> 另见[常驻建树说明](docs/Metal-Resident.md)。它将全部实际特征 bin 展开并在 GPU 完成支持的树；不支持的配置整棵树回退。修改该路径时运行 <code>metal_resident_validate.py</code>，保留默认协同路径的验证；性能比较使用 <code>metal_resident_benchmark.py</code>。
 - 源码、示例和基准报告不得包含私有数据集、私有特征名、逐行预测、凭据或本机路径。保留上游和第三方许可证声明。
 
 ## 检查改动

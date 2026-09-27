@@ -6,6 +6,8 @@
 
 ## 训练任务如何分工
 
+以下描述默认协同路径。可选常驻路径及其独立验证、性能脚本和诊断开关见[GPU 常驻建树](Metal-Resident.md)。<code>tools/build-metal-macos.sh --validate</code> 会运行两种路径的正确性检查。
+
 ~~~mermaid
 flowchart LR
     A[LightGBM 分箱后的 Dataset] --> B[镜像符合条件的特征组]

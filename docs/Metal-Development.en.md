@@ -9,6 +9,10 @@ backend; only Apple M5 has been measured so far.
 
 ## How training is divided
 
+The following describes the default hybrid path. See [GPU-resident trees](Metal-Resident.en.md)
+for the opt-in implementation, separate validation/benchmark scripts and diagnostics.
+<code>tools/build-metal-macos.sh --validate</code> checks both paths.
+
 ```mermaid
 flowchart LR
     A[LightGBM binned Dataset] --> B[Mirror eligible feature groups]

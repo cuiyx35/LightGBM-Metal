@@ -1,0 +1,1104 @@
+{
+    "scope": "generated_data_correctness_with_native_diagnostics",
+    "cases": [
+        {
+            "name": "numeric_13",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9478157730776193,
+                        "loss": 0.3670000434704605
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "f3fe48e6979987c76e19ccdbc6916b53ac1ba6489e9601325503da04f7e74cb0",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9478157730776193,
+                        "loss": 0.367000042462965
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "7946790f153b8c4ac8c12b809aa1d0d8e6a123bf598c258421186a6596066b6a",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9478157730776193,
+                        "loss": 0.3670000535405744
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "2dd4197944ae87c2fbaace952f285b43310c3c0e4cb331d791845ee489393a03",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 7.284281239305912e-08
+        },
+        {
+            "name": "mixed_bagging_13",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9697400513832133,
+                        "loss": 0.3298523903178304
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "b809a9b388c4147d0f6bf47c92c4427e6eac2a32f32c4b948b02d8762a219522",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9697400513832133,
+                        "loss": 0.329852391929032
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "012785d69fe071a22339d8165afa7515a3979f3f536a05ba5b022e58be0e3b4c",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9697400513832133,
+                        "loss": 0.3298523917626694
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "ad099243504825de95ee50164bbe89f93f4883f1b3cc20dc121ba9783fed25b9",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 5.829074267715839e-08
+        },
+        {
+            "name": "numeric_99",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9535500729412141,
+                        "loss": 0.3536434510708385
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "9998d7c5e29606b01f6eb3ce42e2482202991189057f048495977943aa7cfdc4",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9535500729412141,
+                        "loss": 0.35364344951288423
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "de667d5cd57e0874c876300073b24b4f391a95d756ee36d452592f2e02b01e1f",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9535535797303579,
+                        "loss": 0.3536434498056114
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "1ea89a170907187bc19c42f8cfccfc5088baa4328d0b45b7fc0dbeff4b9edacb",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 1.1903546059954806e-07
+        },
+        {
+            "name": "mixed_bagging_99",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9650732349124466,
+                        "loss": 0.33561016447124314
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "7932b393e4eece6ca24e44945cc141357ec912a914b0f1c04f23a757b2afaec8",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9650732349124466,
+                        "loss": 0.3356101645666165
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "17b7dbe23611dcdca4978b65f1dc7a8f484b808b31f370bcb11ea21330d84c04",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9650732349124466,
+                        "loss": 0.33561016406590194
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "5b40a904c7c31460c5652c4e08a6199e1edf9d12581be1d78027b54590e89737",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 5.240109279824878e-08
+        },
+        {
+            "name": "numeric_471",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9601656203605726,
+                        "loss": 0.3397773397468316
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "5b32c38f714a28b60247e15a3a71748bf792c82c48fcebf4824f105d9e23f48b",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9601656203605726,
+                        "loss": 0.33977734265897624
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "b4d9bc414201de14397ca287b35e1b5f7794ff2639db2279ae0eead437bb58f5",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9601656203605726,
+                        "loss": 0.3397773359877327
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "58917a3d19e8da517c689796dd7bce83b4e9c89b59375cf46bfc883e3e49558c",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 1.3181680985629995e-07
+        },
+        {
+            "name": "mixed_bagging_471",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9730194293716086,
+                        "loss": 0.3175123830918591
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "3bbb7e3e87cac65ba7ff85b7fc2936c6a6a04ed38401d452ec5c0232f6b627b3",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9730194293716086,
+                        "loss": 0.31751238387649017
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "a8ae65300ffc89cfaf28e8cb82e6e752297eb98ec0263705b84bbcd3a8e7d172",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9730194293716086,
+                        "loss": 0.31751238793731457
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "5af6b383e133211a5c92dad8c417ff83ed5ed3679377a2b59645607ba66c3722",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 6.055348372724367e-08
+        },
+        {
+            "name": "regularization_depth",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9593048435898077,
+                        "loss": 0.39728014465338785
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "0201453978aa4975faf6ccae026cb5748d61e8a3396e93fd203c824f2bfcf074",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9593048435898077,
+                        "loss": 0.3972801449264656
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "f2c327af1918d8c3d0d14d288195914b7023f50dacccc11a86b2194e8a0ebb0a",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9593048435898077,
+                        "loss": 0.3972800993948816
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "a6a690ede1da8b35214a33283acf8c0c178189a2730966b869eec30302e3fc4f",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 2.208987355256653e-06
+        },
+        {
+            "name": "zero_missing",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9385936835788051,
+                        "loss": 0.36006780882216366
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "458589492b564c84128bd38f42ae6ab017798d8619e1921c2a1516bac1a9880d",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9385936835788051,
+                        "loss": 0.3600678078317237
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "24e1c23639431ff41c7957840aadb2d210fb06c9301fdf1c51054dd7d1344f9f",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9385936835788051,
+                        "loss": 0.3600678076086305
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "22c403126fa5ba8f4ef6962dfff4358c24d4397812961a258ace3631eeb1e9c3",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 1.2435117557885178e-07
+        },
+        {
+            "name": "missing_disabled",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9385621764897102,
+                        "loss": 0.36038953912679644
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "44203795a49184a5778ffab406d47fdd108c551c6e5606450509ea85ad273287",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9385621764897102,
+                        "loss": 0.36038953823836073
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "904c97e4d9b12d0a8826ecb7723480e5bf870e2dab589ad2ec28191fcc627c8a",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9385621764897102,
+                        "loss": 0.3603895442161028
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "4ba053a4aeb14b764e78767c489433ac78f0c995490b7c0f4fd7ec2cc7633115",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 8.168114695727979e-08
+        },
+        {
+            "name": "variable_weights",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9748563426771024,
+                        "loss": 0.2874246796415237
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "837c6074014792ed9f77cddfc6ef55f270a4d312b867bc366c718e17a797e703",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9748563426771024,
+                        "loss": 0.2874246797632304
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "d6e1babb0fe14288fbc20276862113754980ff0400e5947d80c8b771378736c4",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9748563426771024,
+                        "loss": 0.28742467581156583
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "0c2232d59a247d29ea84ce968cd0ad5af7ed24eecf173e3ada106b5eb83e2c4f",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 6.009125108619173e-08
+        },
+        {
+            "name": "onehot_categories",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9776364682053463,
+                        "loss": 0.278293850249564
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "7899f1c4d990675ff85c9725187e9d62ad9ac8f2776cd0e047f9694764931592",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9776364682053463,
+                        "loss": 0.27829385044325144
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "5dfcd5aef524f85288cd00d95797c9a4152d339d36cbf56aeb5efde4d6d74472",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9776364682053463,
+                        "loss": 0.2782938430580074
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "15f429014a0c7bd8f1f7a58eaef3989d512137394277fca3ef87d83215e11a98",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 9.591173966150279e-08
+        },
+        {
+            "name": "sparse_multi_value",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.7026644476288039,
+                        "loss": 0.6080801459337986
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "8a308ee3a62e2657a19ecbbb218e6ae74f28bf2d7f3604aad4ce5d1b1dc353a0",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.7026644476288039,
+                        "loss": 0.6080801459337986
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "7f13f1f04954c62cab7782fde24bb18516772d879ee6803b63bedf224b5b7200",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.7026644476288039,
+                        "loss": 0.6080801259107331
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "e890f62a509acaf43236ecc3f27e40276468be041b5173d35f0ed0b34cba6f89",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 1.2844064106731778e-06
+        },
+        {
+            "name": "constant_hessian",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "mse": 0.16156996665310006
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "043ed8eef2c415d96ccbc2357f082215a88b80dbf0b88ebeaab70fd04f6a58ec",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "mse": 0.16156996665310006
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "fd1117ecb5ef034002d2fa58a41187ecf92a0ced8dfc7ce403d8c73d28e2b24c",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "mse": 0.16156997124818812
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "093651cbd6fc65ce8a5194af44dd7e9a823a8810520c042b979d5a1cb53952e5",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 1.9796942130057005e-07
+        },
+        {
+            "name": "objective_leaf_renewal",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "mse": 0.28833922305343407
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "60bf0103ad98005dea7daa0ca2c25cc99a1ef18903d7db2ebc24e51496da99ec",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "mse": 0.28833922305343407
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "b70ff575e46f3dfac4ed336e8fdd22ff6fb28c9b04415cf7341ddaeb81bed83f",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "mse": 0.28833922305343407
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "242dfa0d53fc71031506d606b8b96c0155108dc0078e8a8c144e0def0d6c6120",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 0.0
+        },
+        {
+            "name": "multiclass",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "loss": 0.3466394809950031
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "cbcf4029840dd3b598d0f7a794c29adf6b7e90409e84a2e632dd61eee1ce5a64",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "loss": 0.34663948400957745
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "f633bb2513db98c275dfd4175a1d19ae81268674ddfe7caf7bf46e8a1c4870d9",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "loss": 0.34663947918538457
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "c5d7dd2ce3d5733c18f96dc9675efbc0eecaddebac1aa9b53b349468d9df1c12",
+                    "native_verification_trees": 45
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 4.964820971009587e-07
+        },
+        {
+            "name": "stump",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.5,
+                        "loss": 0.6933120706853443
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "56e95e6da7e580bf8193c7d2dac2ebf19483eb4d23efa37f1a0160e6e51d50d1",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.5,
+                        "loss": 0.6933120706853443
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "f29da82ff391a6d67d050ce1f19a6d22109eedcada4c8e3adc20ac0daf511986",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.5,
+                        "loss": 0.6933120706853443
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "f29da82ff391a6d67d050ce1f19a6d22109eedcada4c8e3adc20ac0daf511986",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 0.0
+        },
+        {
+            "name": "wide_bins_fallback",
+            "status": "PASS",
+            "expected_fallback": true,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9620186382971057,
+                        "loss": 0.33588298182909854
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "53ce1974f2f50fd9ae476d2718bbb475369df1f76d0f6c9b499053fed2b9fec3",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9620186382971057,
+                        "loss": 0.33588298182909854
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "5d4a88e8d49838e8876bd1c9ac3632a5ae635406cff06017a92f1f331b963481",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9620186382971057,
+                        "loss": 0.33588298182909854
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "5d4a88e8d49838e8876bd1c9ac3632a5ae635406cff06017a92f1f331b963481",
+                    "native_verification_trees": 0
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 0.0
+        },
+        {
+            "name": "monotone_fallback",
+            "status": "PASS",
+            "expected_fallback": true,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9237870040474077,
+                        "loss": 0.3954711984883723
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "5e49ab30756fe9ccfb1eda6fe2ecbc253ec6277ba4d8237d99eef2a4a58a7686",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9237870040474077,
+                        "loss": 0.39547119770429445
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "2fe5271ea8661aec5d89b7189556b4ea97cfeabd167fd7c8107ff46a09191371",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9237870040474077,
+                        "loss": 0.39547119770429445
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "2fe5271ea8661aec5d89b7189556b4ea97cfeabd167fd7c8107ff46a09191371",
+                    "native_verification_trees": 0
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 3.9681912311628764e-08
+        },
+        {
+            "name": "node_sampling_fallback",
+            "status": "PASS",
+            "expected_fallback": true,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9645168588592977,
+                        "loss": 0.3340636339633883
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "b4024daa929e9f50a46209169e85e665f5de07ec818822feb8eba69380845b3a",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9645168588592977,
+                        "loss": 0.334063634161999
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "30b11f72c39ca6a076577f40dc2d1068c54415ecac642af7881ca089b0573163",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9645168588592977,
+                        "loss": 0.334063634161999
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "30b11f72c39ca6a076577f40dc2d1068c54415ecac642af7881ca089b0573163",
+                    "native_verification_trees": 0
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 3.177027235734542e-08
+        },
+        {
+            "name": "extra_trees_fallback",
+            "status": "PASS",
+            "expected_fallback": true,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9575317520780129,
+                        "loss": 0.3727863146394066
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "07bc9d5c5b8f58c489d16a00ec0706d70691d2cae46de56f8492361b64ae941f",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9575317520780129,
+                        "loss": 0.3727863139856612
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "eaa1b127be383d2747ebc3ddfce151b299f752f257936b903f012da6bec3211a",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9575317520780129,
+                        "loss": 0.3727863139856612
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "eaa1b127be383d2747ebc3ddfce151b299f752f257936b903f012da6bec3211a",
+                    "native_verification_trees": 0
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 3.010431548489123e-08
+        },
+        {
+            "name": "resize_leaf_pool",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9649873712472883,
+                        "loss": 0.3337719118782059
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "398832cd759c1293334b826cc512f31d06a991d06fc15a185e306aee9e6c64cf",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9649873712472883,
+                        "loss": 0.33377191511795645
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "fad7db8d3bd9ce1f20c594488675351f289aea43d8b19e1ad4dd0f7708b37bc0",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9649873712472883,
+                        "loss": 0.3337719248200956
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "ca6463dcd456402de34437b49166884a6362b067be4a59e5fabe9a0bb47ced65",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 9.308649295824978e-08
+        },
+        {
+            "name": "switch_fallback_mid_fit",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9624961583164066,
+                        "loss": 0.33685492686450497
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "de3711ea9331604828710f0150e7490684342b95af2b8caebf02a87f6848c7ca",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9624961583164066,
+                        "loss": 0.33685492757765945
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "eaf82d96500c67ab6ffdb54a273bb2126ee537eb7de2273ef306315b632231c9",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9624961583164066,
+                        "loss": 0.336854919061232
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "1e09bbb1db08ff79cf9ee231ab12fb43303f6422ae8f597ec318d3ad363548ee",
+                    "native_verification_trees": 10
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 8.082549285415297e-08
+        },
+        {
+            "name": "goss",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9789430690021433,
+                        "loss": 0.1961548880841728
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "2515ef87bcedb41c79713b5ae67e572b37ba501ea46837b8fa4e29461be0ff8a",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9789430690021433,
+                        "loss": 0.19615489003103637
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "96acaf1f8f91ce8851756f717aea0187a7e2764d39fd5a35133758bcd3de1b08",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9789430690021433,
+                        "loss": 0.1961548815132585
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "bda5176f3ac35cdcc185d898d2920938586806702b1fbaa5f22af6dd7601ffa0",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 6.643400526917809e-07
+        },
+        {
+            "name": "replace_training_dataset",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9643691980566838,
+                        "loss": 0.3275298457946964
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "ae3a41da908b0910475f7d22d6c8bfafce8ab9a18242335d49fbee53b372cc7c",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9643691980566838,
+                        "loss": 0.32752984873748925
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "e626771d70b5308826d5cf49832aa67b19a3ed89d127c4fb948213671993327e",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9643691980566838,
+                        "loss": 0.32752983969114297
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "2b20c6cf15591aaa4c80909d17d3f630ccfb6e8b11d2f95a4554c884b2958015",
+                    "native_verification_trees": 16
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 1.143924377444705e-07
+        },
+        {
+            "name": "resume_serialized_model",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9776364682053463,
+                        "loss": 0.278293850249564
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "7eac7e57735ab19fcf5e04981f1810430467b7f61ae8caf0b6d4fe00f1feb737",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9776364682053463,
+                        "loss": 0.27830145057383254
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "5450ca0d54092f0630177bee6da38106ba74bc492f57ea94446c11eaffa89ac5",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9776364682053463,
+                        "loss": 0.27830145712931825
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "784bb794501b959cb96dc4fc226d01daee3fd0ec220a441dc232abbd8153f975",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 0.0005333029873680339
+        },
+        {
+            "name": "maximum_supported_bins",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.9595634646129635,
+                        "loss": 0.3388325694022533
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "d498365c8896af365142e0bc2ac5edf8e87c91662e1233dc3bc570f18f4af18b",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.9595634646129635,
+                        "loss": 0.3388325694022533
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "892cb0583e050854ecfb4e8de7c9deeaec4527d3ed4fba13158529410bcfb07e",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.9595634646129635,
+                        "loss": 0.33883259218433903
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "3a61e0d775e9930ddb20f94bca7eae8b8be294c93ad818d4dcb76f3a29e9f03f",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 2.3179653252380916e-07
+        },
+        {
+            "name": "zero_weight_rows",
+            "status": "PASS",
+            "expected_fallback": false,
+            "runs": [
+                {
+                    "backend": "cpu",
+                    "metric": {
+                        "auc": 0.957403111988956,
+                        "loss": 0.342517721139727
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "27975727b08e5891f1c599beefb2008be4730592302df70d62de6e8ac797a06e",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "hybrid",
+                    "metric": {
+                        "auc": 0.957403111988956,
+                        "loss": 0.34251772207943804
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "1411b53a6f5ff413bbedc3f73c82ba5d26fc1d8560b52492d6ae7df7f4597372",
+                    "native_verification_trees": 0
+                },
+                {
+                    "backend": "resident",
+                    "metric": {
+                        "auc": 0.957403111988956,
+                        "loss": 0.34251772893436666
+                    },
+                    "cached_score_max_error": 0.0,
+                    "reload_max_error": 0.0,
+                    "model_sha256": "64b1d08eb75aa323f43c0cdc79a2839e3acc6063e6af4af1425511d56129faae",
+                    "native_verification_trees": 15
+                }
+            ],
+            "cpu_resident_max_prediction_difference": 1.1786131748348083e-07
+        }
+    ],
+    "status": "PASS"
+}

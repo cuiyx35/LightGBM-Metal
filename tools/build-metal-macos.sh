@@ -19,8 +19,9 @@ Environment:
   BUILD_JOBS     Parallel build jobs (default: 2)
 
 The build writes lib_lightgbm.dylib in the repository root and links it into
-python-package/. --validate runs five small synthetic model checks and writes
-build-metal/metal_validation.json. It does not run a performance benchmark.
+python-package/. --validate checks both the default hybrid and opt-in resident
+paths, writing build-metal/metal_validation.json and metal_resident_validation.json.
+It does not run a performance benchmark.
 EOF
 }
 
@@ -75,4 +76,7 @@ if [[ "$validate" -eq 1 ]]; then
   PYTHONPATH="$repo_root/python-package${PYTHONPATH:+:$PYTHONPATH}" \
     "$python_bin" "$repo_root/examples/python-guide/metal_validate.py" \
     --output "$build_dir/metal_validation.json"
+  PYTHONPATH="$repo_root/python-package${PYTHONPATH:+:$PYTHONPATH}" \
+    "$python_bin" "$repo_root/examples/python-guide/metal_resident_validate.py" \
+    --output "$build_dir/metal_resident_validation.json"
 fi
