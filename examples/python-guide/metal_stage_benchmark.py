@@ -43,6 +43,9 @@ def main() -> None:
     )
     parser.add_argument("--output", type=Path, default=Path("metal_stage_benchmark.json"))
     args = parser.parse_args()
+    for key in os.environ:
+        if key.startswith("LGBM_METAL_RESIDENT"):
+            parser.error(f"Unset resident-tree override {key}; this comparison uses the hybrid backend")
     if os.environ.get("LGBM_METAL_STAGE_SELECTED") is not None:
         parser.error("Unset LGBM_METAL_STAGE_SELECTED; this script controls it")
     if any(

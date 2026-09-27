@@ -90,6 +90,9 @@ def main() -> None:
     parser.add_argument("--positive-rate", type=float, default=0.05)
     parser.add_argument("--output", type=Path, default=Path("metal_synthetic_benchmark.json"))
     args = parser.parse_args()
+    for key in os.environ:
+        if key.startswith("LGBM_METAL_RESIDENT"):
+            parser.error(f"Unset resident-tree override {key}; use metal_resident_benchmark.py for that backend")
     preset = (
         {
             "train_rows": 3_300_000,

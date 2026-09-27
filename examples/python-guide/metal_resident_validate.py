@@ -35,32 +35,79 @@ class CaptureLogger:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=Path("metal_resident_validation.json"))
+    parser.add_argument("--case", action="append", dest="cases", help="Run only this named case (repeatable)")
     args = parser.parse_args()
     report: dict = {"scope": "generated_data_correctness_with_native_diagnostics", "cases": []}
     logger = CaptureLogger()
     lgb.register_logger(logger)
     previous = {name: os.environ.get(name) for name in ("LGBM_METAL_RESIDENT", "LGBM_METAL_RESIDENT_VERIFY")}
 
-    def run(name, x, y, objective="binary", extra=None, dataset_params=None, weights=None, fallback=False):
+    def run(
+        name,
+        x,
+        y,
+        objective="binary",
+        extra=None,
+        dataset_params=None,
+        weights=None,
+        fallback=False,
+        reset_parameters=None,
+        replace_training_data=False,
+        resume=False,
+    ):
+        if args.cases and name not in args.cases:
+            return
         boundary = int(len(y) * 0.75)
         train = x.iloc[:boundary] if isinstance(x, pd.DataFrame) else x[:boundary]
         held = x.iloc[boundary:] if isinstance(x, pd.DataFrame) else x[boundary:]
         settings = {"max_bin": 63, "feature_pre_filter": False, **(dataset_params or {})}
         params = {
-            "objective": objective, "num_threads": 2, "num_leaves": 15, "seed": 471,
-            "force_col_wise": True, "verbosity": 1, "learning_rate": 0.1, **settings, **(extra or {}),
+            "objective": objective,
+            "num_threads": 2,
+            "num_leaves": 15,
+            "seed": 471,
+            "force_col_wise": True,
+            "verbosity": 1,
+            "learning_rate": 0.1,
+            **settings,
+            **(extra or {}),
         }
-        dataset = lgb.Dataset(train, label=y[:boundary], weight=None if weights is None else weights[:boundary],
-                              free_raw_data=False, params=settings)
+        dataset = lgb.Dataset(
+            train,
+            label=y[:boundary],
+            weight=None if weights is None else weights[:boundary],
+            free_raw_data=False,
+            params=settings,
+        )
         predictions, metrics, rows = {}, {}, []
         for backend in ("cpu", "hybrid", "resident"):
+            print(f"CASE {name} BACKEND {backend}", flush=True)
             os.environ["LGBM_METAL_RESIDENT"] = "1" if backend == "resident" else "0"
             os.environ["LGBM_METAL_RESIDENT_VERIFY"] = "1"
             logger.messages.clear()
-            model = lgb.train({**params, "device_type": "cpu" if backend == "cpu" else "metal"}, dataset,
-                              num_boost_round=15, keep_training_booster=True)
+            backend_params = {**params, "device_type": "cpu" if backend == "cpu" else "metal"}
+            initial = None
+            if resume:
+                initial = lgb.train(backend_params, dataset, num_boost_round=5)
+                initial = lgb.Booster(model_str=initial.model_to_string())
+            model = lgb.train(
+                backend_params,
+                dataset,
+                init_model=initial,
+                num_boost_round=10 if resume else 15,
+                keep_training_booster=True,
+                callbacks=[] if reset_parameters is None else [lgb.reset_parameter(**reset_parameters)],
+            )
+            score_train = train
+            if replace_training_data:
+                half = boundary // 2
+                score_train = train.iloc[:half] if isinstance(train, pd.DataFrame) else train[:half]
+                replacement = lgb.Dataset(
+                    score_train, label=y[:half], reference=dataset, params=settings, free_raw_data=False
+                )
+                model.update(train_set=replacement)
             cached = model._Booster__inner_predict(data_idx=0).copy()
-            fresh = model.predict(train)
+            fresh = model.predict(score_train)
             score_error = float(np.max(np.abs(cached - fresh)))
             if score_error > 1e-10:
                 raise AssertionError(f"{name}/{backend}: cached scores disagree with prediction: {score_error}")
@@ -74,18 +121,26 @@ def main() -> None:
                 if not any(marker in message for message in logger.messages):
                     raise AssertionError(f"{name}: expected execution path was not logged: {marker}")
             if objective == "binary":
-                metric = {"auc": float(roc_auc_score(y[boundary:], prediction)),
-                          "loss": float(log_loss(y[boundary:], prediction))}
+                metric = {
+                    "auc": float(roc_auc_score(y[boundary:], prediction)),
+                    "loss": float(log_loss(y[boundary:], prediction)),
+                }
             elif objective == "multiclass":
                 metric = {"loss": float(log_loss(y[boundary:], prediction))}
             else:
                 metric = {"mse": float(mean_squared_error(y[boundary:], prediction))}
             metrics[backend] = metric
             predictions[backend] = prediction
-            rows.append({"backend": backend, "metric": metric, "cached_score_max_error": score_error,
-                         "reload_max_error": reload_error,
-                         "model_sha256": hashlib.sha256(model.model_to_string().encode()).hexdigest(),
-                         "native_verification_trees": sum("resident verification:" in m for m in logger.messages)})
+            rows.append(
+                {
+                    "backend": backend,
+                    "metric": metric,
+                    "cached_score_max_error": score_error,
+                    "reload_max_error": reload_error,
+                    "model_sha256": hashlib.sha256(model.model_to_string().encode()).hexdigest(),
+                    "native_verification_trees": sum("resident verification:" in m for m in logger.messages),
+                }
+            )
         # These are fixed engineering gates for generated tasks, not business-model acceptance criteria.
         for baseline in ("cpu", "hybrid"):
             if "auc" in metrics[baseline] and metrics["resident"]["auc"] < metrics[baseline]["auc"] - 0.005:
@@ -95,8 +150,15 @@ def main() -> None:
                 raise AssertionError(f"{name}: held-out loss gate failed: {metrics}")
         if fallback and not np.array_equal(predictions["resident"], predictions["hybrid"]):
             raise AssertionError(f"{name}: fallback changed hybrid predictions")
-        result = {"name": name, "status": "PASS", "expected_fallback": fallback, "runs": rows,
-                  "cpu_resident_max_prediction_difference": float(np.max(np.abs(predictions["cpu"] - predictions["resident"])))}
+        result = {
+            "name": name,
+            "status": "PASS",
+            "expected_fallback": fallback,
+            "runs": rows,
+            "cpu_resident_max_prediction_difference": float(
+                np.max(np.abs(predictions["cpu"] - predictions["resident"]))
+            ),
+        }
         report["cases"].append(result)
         print(json.dumps(result), flush=True)
 
@@ -112,13 +174,35 @@ def main() -> None:
             frame = pd.DataFrame(mixed, columns=[f"f{i}" for i in range(12)])
             cats = rng.integers(0, 30, size=len(x))
             frame["category"] = pd.Categorical(cats)
-            ym = (np.nan_to_num(mixed[:, 0]) + 0.8 * np.nan_to_num(mixed[:, 1]) +
-                  0.9 * (cats % 3 == 0) + rng.normal(scale=0.3, size=len(x)) > 0.3).astype(np.int8)
-            run(f"mixed_bagging_{seed}", frame, ym,
-                extra={"feature_fraction": 0.8, "bagging_fraction": 0.75, "bagging_freq": 1})
-        run("regularization_depth", frame, ym, extra={"lambda_l1": 0.3, "lambda_l2": 2.0,
-            "path_smooth": 3.0, "max_delta_step": 0.8, "max_depth": 4,
-            "cat_l2": 4.0, "cat_smooth": 5.0, "min_data_per_group": 30, "max_cat_threshold": 9})
+            ym = (
+                np.nan_to_num(mixed[:, 0])
+                + 0.8 * np.nan_to_num(mixed[:, 1])
+                + 0.9 * (cats % 3 == 0)
+                + rng.normal(scale=0.3, size=len(x))
+                > 0.3
+            ).astype(np.int8)
+            run(
+                f"mixed_bagging_{seed}",
+                frame,
+                ym,
+                extra={"feature_fraction": 0.8, "bagging_fraction": 0.75, "bagging_freq": 1},
+            )
+        run(
+            "regularization_depth",
+            frame,
+            ym,
+            extra={
+                "lambda_l1": 0.3,
+                "lambda_l2": 2.0,
+                "path_smooth": 3.0,
+                "max_delta_step": 0.8,
+                "max_depth": 4,
+                "cat_l2": 4.0,
+                "cat_smooth": 5.0,
+                "min_data_per_group": 30,
+                "max_cat_threshold": 9,
+            },
+        )
         run("zero_missing", mixed, ym, dataset_params={"zero_as_missing": True})
         run("missing_disabled", mixed, ym, dataset_params={"use_missing": False})
         run("variable_weights", frame, ym, weights=rng.uniform(0.01, 3.0, len(ym)))
@@ -136,6 +220,25 @@ def main() -> None:
         run("monotone_fallback", x, y, extra={"monotone_constraints": [1] + [0] * 11}, fallback=True)
         run("node_sampling_fallback", x, y, extra={"feature_fraction_bynode": 0.8}, fallback=True)
         run("extra_trees_fallback", x, y, extra={"extra_trees": True}, fallback=True)
+        run("resize_leaf_pool", x, y, reset_parameters={"num_leaves": [7] * 5 + [31] * 5 + [15] * 5})
+        run(
+            "switch_fallback_mid_fit",
+            x,
+            y,
+            reset_parameters={"feature_fraction_bynode": [1.0] * 5 + [0.8] * 5 + [1.0] * 5},
+        )
+        run(
+            "goss",
+            x,
+            y,
+            extra={"data_sample_strategy": "goss", "learning_rate": 0.4, "top_rate": 0.2, "other_rate": 0.1},
+        )
+        run("replace_training_dataset", x, y, replace_training_data=True)
+        run("resume_serialized_model", frame, ym, resume=True)
+        run("maximum_supported_bins", x, y, dataset_params={"max_bin": 256, "min_data_in_bin": 1})
+        run("zero_weight_rows", x, y, weights=(rng.random(len(y)) > 0.3).astype(np.float32))
+        if args.cases and set(args.cases) != {case["name"] for case in report["cases"]}:
+            raise ValueError("Unknown --case name")
         report["status"] = "PASS"
     except Exception as error:
         report["status"] = "FAIL"

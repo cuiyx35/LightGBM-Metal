@@ -219,6 +219,10 @@ if(USE_OPENMP)
         find_package(OpenMP REQUIRED)
     endif()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    if(USE_METAL)
+        # FindOpenMP's CXX target does not enable OpenMP for Objective-C++ sources.
+        set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    endif()
 endif()
 
 if(USE_GPU)
