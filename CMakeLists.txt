@@ -450,7 +450,11 @@ set(
 )
 if(USE_METAL)
   list(APPEND LGBM_SOURCES src/treelearner/metal_tree_learner.mm src/treelearner/metal_resident_tree.mm)
-  set_source_files_properties(src/treelearner/metal_tree_learner.mm src/treelearner/metal_resident_tree.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
+  set_source_files_properties(
+    src/treelearner/metal_tree_learner.mm
+    src/treelearner/metal_resident_tree.mm
+    PROPERTIES COMPILE_FLAGS "-fobjc-arc"
+  )
 endif()
 set(
     LGBM_CUDA_SOURCES

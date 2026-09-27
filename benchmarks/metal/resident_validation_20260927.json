@@ -40,7 +40,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 7.284281239305912e-08
+            "cpu_resident_max_prediction_difference": 7.284281239305912e-8
         },
         {
             "name": "mixed_bagging_13",
@@ -81,7 +81,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 5.829074267715839e-08
+            "cpu_resident_max_prediction_difference": 5.829074267715839e-8
         },
         {
             "name": "numeric_99",
@@ -122,7 +122,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 1.1903546059954806e-07
+            "cpu_resident_max_prediction_difference": 1.1903546059954806e-7
         },
         {
             "name": "mixed_bagging_99",
@@ -163,7 +163,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 5.240109279824878e-08
+            "cpu_resident_max_prediction_difference": 5.240109279824878e-8
         },
         {
             "name": "numeric_471",
@@ -204,7 +204,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 1.3181680985629995e-07
+            "cpu_resident_max_prediction_difference": 1.3181680985629995e-7
         },
         {
             "name": "mixed_bagging_471",
@@ -245,7 +245,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 6.055348372724367e-08
+            "cpu_resident_max_prediction_difference": 6.055348372724367e-8
         },
         {
             "name": "regularization_depth",
@@ -286,7 +286,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 2.208987355256653e-06
+            "cpu_resident_max_prediction_difference": 2.208987355256653e-6
         },
         {
             "name": "zero_missing",
@@ -327,7 +327,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 1.2435117557885178e-07
+            "cpu_resident_max_prediction_difference": 1.2435117557885178e-7
         },
         {
             "name": "missing_disabled",
@@ -368,7 +368,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 8.168114695727979e-08
+            "cpu_resident_max_prediction_difference": 8.168114695727979e-8
         },
         {
             "name": "variable_weights",
@@ -409,7 +409,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 6.009125108619173e-08
+            "cpu_resident_max_prediction_difference": 6.009125108619173e-8
         },
         {
             "name": "onehot_categories",
@@ -450,7 +450,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 9.591173966150279e-08
+            "cpu_resident_max_prediction_difference": 9.591173966150279e-8
         },
         {
             "name": "sparse_multi_value",
@@ -491,7 +491,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 1.2844064106731778e-06
+            "cpu_resident_max_prediction_difference": 1.2844064106731778e-6
         },
         {
             "name": "constant_hessian",
@@ -529,7 +529,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 1.9796942130057005e-07
+            "cpu_resident_max_prediction_difference": 1.9796942130057005e-7
         },
         {
             "name": "objective_leaf_renewal",
@@ -605,7 +605,7 @@
                     "native_verification_trees": 45
                 }
             ],
-            "cpu_resident_max_prediction_difference": 4.964820971009587e-07
+            "cpu_resident_max_prediction_difference": 4.964820971009587e-7
         },
         {
             "name": "stump",
@@ -728,7 +728,7 @@
                     "native_verification_trees": 0
                 }
             ],
-            "cpu_resident_max_prediction_difference": 3.9681912311628764e-08
+            "cpu_resident_max_prediction_difference": 3.9681912311628764e-8
         },
         {
             "name": "node_sampling_fallback",
@@ -769,7 +769,7 @@
                     "native_verification_trees": 0
                 }
             ],
-            "cpu_resident_max_prediction_difference": 3.177027235734542e-08
+            "cpu_resident_max_prediction_difference": 3.177027235734542e-8
         },
         {
             "name": "extra_trees_fallback",
@@ -810,7 +810,7 @@
                     "native_verification_trees": 0
                 }
             ],
-            "cpu_resident_max_prediction_difference": 3.010431548489123e-08
+            "cpu_resident_max_prediction_difference": 3.010431548489123e-8
         },
         {
             "name": "resize_leaf_pool",
@@ -851,7 +851,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 9.308649295824978e-08
+            "cpu_resident_max_prediction_difference": 9.308649295824978e-8
         },
         {
             "name": "switch_fallback_mid_fit",
@@ -892,7 +892,7 @@
                     "native_verification_trees": 10
                 }
             ],
-            "cpu_resident_max_prediction_difference": 8.082549285415297e-08
+            "cpu_resident_max_prediction_difference": 8.082549285415297e-8
         },
         {
             "name": "goss",
@@ -933,7 +933,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 6.643400526917809e-07
+            "cpu_resident_max_prediction_difference": 6.643400526917809e-7
         },
         {
             "name": "replace_training_dataset",
@@ -974,7 +974,7 @@
                     "native_verification_trees": 16
                 }
             ],
-            "cpu_resident_max_prediction_difference": 1.143924377444705e-07
+            "cpu_resident_max_prediction_difference": 1.143924377444705e-7
         },
         {
             "name": "resume_serialized_model",
@@ -1056,7 +1056,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 2.3179653252380916e-07
+            "cpu_resident_max_prediction_difference": 2.3179653252380916e-7
         },
         {
             "name": "zero_weight_rows",
@@ -1097,7 +1097,7 @@
                     "native_verification_trees": 15
                 }
             ],
-            "cpu_resident_max_prediction_difference": 1.1786131748348083e-07
+            "cpu_resident_max_prediction_difference": 1.1786131748348083e-7
         }
     ],
     "status": "PASS"
