@@ -36,6 +36,19 @@ PYTHONPATH="$PWD/python-package" python3 examples/python-guide/metal_synthetic_b
 使用 Metal 训练时设置 <code>device_type="metal"</code>；返回 CPU 路径设置 <code>device_type="cpu"</code>。
 连续比较多个训练配置时，可先构建一次 <code>lightgbm.Dataset</code> 并重复传给 <code>lightgbm.train()</code>，省去重复分箱。仅对训练行、特征顺序、类别定义和分箱参数相同的实验复用；改变 <code>max_bin</code> 或交叉验证切分时需重建。示例见[实验使用说明](docs/Metal-Experimental.md#重复实验复用-dataset)。
 
+## 安装、命令行与可视化
+
+仓库新增统一的[实验 CLI 与本地看板](docs/Metal-CLI.md)。`doctor --json` 检查依赖；`build --validate` 构建并验证；`benchmark` 运行小规模生成数据对照；`report` 生成独立 HTML，`serve` 在本机展示自动刷新的结果和命令状态：
+
+~~~bash
+python3 tools/metal_experiment.py doctor --json
+python3 tools/metal_experiment.py report \
+  --benchmark benchmarks/metal/m5_current_3m_100trees_cpu_metal.json
+python3 tools/metal_experiment.py serve
+~~~
+
+源码使用者仍需本机编译。若先在 Apple Silicon Mac 上运行 `python3 tools/metal_experiment.py wheel` 构建实验 wheel，其他兼容机器安装该 wheel 时无需编译 LightGBM，但仍需要 `libomp` 运行库。wheel 沿用 `lightgbm` 包名，请在独立虚拟环境使用；GitHub Actions 会验证安装和 Metal 小型训练并保存工作流构件。具体条件和 AI 调用的 JSON 契约见[CLI 说明](docs/Metal-CLI.md)。
+
 ## 公开测试结果
 
 一台配备 32 GiB 统一内存的 Apple M5，在生成数据的 330 万训练行、80 万留出行、512 个特征、500 棵树、6 个 CPU 线程的历史测试中，CPU/Metal **训练时间中位数之比为 1.55 倍**。训练加预测的中位数之比为 1.53 倍；加入双方共用的一次性数据生成和 Dataset 构建时间后，估算整体比值为 1.45 倍。**这组数据来自大叶节点梯度预处理加入前的提交 <code>7807af1</code>。** 当前版本默认在大叶节点先由 GPU 聚合并量化选中行的梯度和 Hessian；其新旧路径对照见[公开基准报告](benchmarks/metal/README.md)。这些测试只来自一台机器，不能代表其他芯片或真实业务数据。
@@ -75,6 +88,7 @@ python examples/python-guide/metal_synthetic_benchmark.py \
 | --- | --- | --- |
 | 项目入口 | 本页 | [README.en.md](README.en.md) |
 | Metal 使用与验证 | [实验使用说明](docs/Metal-Experimental.md) | [Experimental Metal notes](docs/Metal-Experimental.en.md) |
+| 实验 CLI 与看板 | [命令行说明](docs/Metal-CLI.md) | [CLI and dashboard](docs/Metal-CLI.en.md) |
 | 架构与扩展流程 | [开发指南](docs/Metal-Development.md) | [Development guide](docs/Metal-Development.en.md) |
 | 测试结果与限制 | [公开基准报告](benchmarks/metal/README.md) | [Benchmark report](benchmarks/metal/README.en.md) |
 | AI 编码约束 | [AGENTS.md](AGENTS.md) | [AGENTS.en.md](AGENTS.en.md) |

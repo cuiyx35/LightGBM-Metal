@@ -42,8 +42,49 @@ jobs:
         run: |
           python3 -m venv "$RUNNER_TEMP/metal-venv"
           "$RUNNER_TEMP/metal-venv/bin/python" -m pip install --disable-pip-version-check \
-            numpy scipy pandas scikit-learn narwhals
+            numpy scipy pandas scikit-learn narwhals pytest
       - name: Build and validate Metal
         env:
           PYTHON_BIN: ${{ runner.temp }}/metal-venv/bin/python
         run: bash tools/build-metal-macos.sh --validate --jobs 2
+      - name: Check experiment CLI and render report
+        run: |
+          "$RUNNER_TEMP/metal-venv/bin/python" tools/metal_experiment.py doctor --json
+          "$RUNNER_TEMP/metal-venv/bin/python" tools/metal_experiment.py report \
+            --output "$RUNNER_TEMP/metal-report.html"
+          "$RUNNER_TEMP/metal-venv/bin/python" -m pytest -q tests/test_metal_experiment_cli.py
+      - name: Build experimental Metal wheel
+        env:
+          PYTHON_BIN: ${{ runner.temp }}/metal-venv/bin/python
+        run: |
+          "$PYTHON_BIN" -m pip install --disable-pip-version-check build
+          bash tools/build-metal-wheel.sh
+      - name: Install wheel in a clean environment
+        run: |
+          python3 -m venv "$RUNNER_TEMP/metal-wheel-venv"
+          "$RUNNER_TEMP/metal-wheel-venv/bin/python" -m pip install --disable-pip-version-check numpy scipy narwhals
+          "$RUNNER_TEMP/metal-wheel-venv/bin/python" -m pip install --disable-pip-version-check --no-deps dist/lightgbm-*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/metal-wheel-venv/bin/python" - <<'PY'
+          import numpy as np
+          import lightgbm as lgb
+          from lightgbm.libpath import _find_lib_path
+
+          assert "metal-wheel-venv" in _find_lib_path()[0]
+          rng = np.random.default_rng(29)
+          x = rng.normal(size=(1000, 12)).astype("float32")
+          y = (x[:, 0] + x[:, 1] > 0).astype("int8")
+          model = lgb.train(
+              {"device_type": "metal", "objective": "binary", "verbosity": -1, "num_threads": 2},
+              lgb.Dataset(x, label=y),
+              num_boost_round=4,
+          )
+          assert model.num_trees() == 4
+          print("WHEEL_METAL_SMOKE_PASS")
+          PY
+      - name: Upload experimental wheel
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: lightgbm-metal-macos-arm64-wheel
+          path: dist/lightgbm-*.whl
+          if-no-files-found: error

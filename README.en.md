@@ -36,6 +36,19 @@ PYTHONPATH="$PWD/python-package" python3 examples/python-guide/metal_synthetic_b
 Set <code>device_type="metal"</code> to train with Metal, or <code>device_type="cpu"</code> for the CPU path.
 For repeated fits with the same training rows, feature order, categorical definitions, and binning parameters, construct one <code>lightgbm.Dataset</code> and reuse it with <code>lightgbm.train()</code>. Rebuild it when changing <code>max_bin</code> or the cross-validation split. See the [usage example](docs/Metal-Experimental.en.md#reuse-a-dataset-across-fits).
 
+## Installation, CLI, and dashboard
+
+The [experiment CLI and local dashboard](docs/Metal-CLI.en.md) combine prerequisite checks, builds, synthetic validation, benchmarks, and result display. `report` produces standalone HTML; `serve` shows locally refreshed results and command status:
+
+~~~bash
+python3 tools/metal_experiment.py doctor --json
+python3 tools/metal_experiment.py report \
+  --benchmark benchmarks/metal/m5_current_3m_100trees_cpu_metal.json
+python3 tools/metal_experiment.py serve
+~~~
+
+Source users still compile locally. An experimental wheel built with `python3 tools/metal_experiment.py wheel` on Apple Silicon macOS avoids compilation when installed on a compatible Mac, but still requires the `libomp` runtime. Use a separate virtual environment because this wheel retains the `lightgbm` distribution name. GitHub Actions checks a clean wheel installation and small Metal training run, then saves a workflow artifact. See the [CLI guide](docs/Metal-CLI.en.md) for requirements and the JSON contract for automation.
+
 ## Public benchmark
 
 On one Apple M5 with 32 GiB unified memory, a historical generated-data test with 3.3 million fit rows, 0.8 million held rows, 512 features, 500 trees, and 6 CPU threads produced a **1.55× CPU/Metal median training-time ratio**. The median ratio for training plus prediction was 1.53×. Including the one-time data generation and Dataset construction cost shared by both backends gives an estimated overall ratio of 1.45×. **This result came from commit <code>7807af1</code>, before large-leaf gradient staging.** The current version stages and quantizes selected gradients and Hessians on the GPU for large leaves by default. See the [public benchmark report](benchmarks/metal/README.en.md) for the Metal path comparison, raw JSON, and limitations. Results from one machine do not describe other chips or real application data.
@@ -75,6 +88,7 @@ An opt-in [GPU-resident tree path](docs/Metal-Resident.en.md) was added on 2026-
 | --- | --- | --- |
 | Project entry | [README.md](README.md) | This page |
 | Metal usage and validation | [实验使用说明](docs/Metal-Experimental.md) | [Experimental Metal notes](docs/Metal-Experimental.en.md) |
+| Experiment CLI and dashboard | [命令行说明](docs/Metal-CLI.md) | [CLI and dashboard](docs/Metal-CLI.en.md) |
 | Architecture and extension workflow | [开发指南](docs/Metal-Development.md) | [Development guide](docs/Metal-Development.en.md) |
 | Benchmarks and limitations | [公开基准报告](benchmarks/metal/README.md) | [Benchmark report](benchmarks/metal/README.en.md) |
 | Coding-agent guidance | [AGENTS.md](AGENTS.md) | [AGENTS.en.md](AGENTS.en.md) |

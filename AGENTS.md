@@ -20,4 +20,6 @@
 
 Python 脚本写出汇总 JSON，失败时以非零状态退出。它们需要本分支的 Python 包和启用 Metal 的原生库；解读基准前先确认实际导入路径。profiling 环境变量会带来额外开销，主报告计时应关闭。
 
+仓库统一入口是[实验 CLI](docs/Metal-CLI.md)：`python3 tools/metal_experiment.py doctor --json` 可先检查前提，`build`、`validate`、`benchmark` 可用 `--json-out` 输出状态，`report` 和 `serve` 只从指定的汇总 JSON 渲染本地看板。不要从状态 `PASS` 推断业务模型质量合格。
+
 不要推送到指向 LightGBM 官方仓库的 <code>upstream</code> 远端。公开项目只推送到仓库所有者账号下的 <code>origin</code>，推送前复核目标和提交署名。公开源码基准只能使用生成数据。

@@ -41,6 +41,12 @@ require this fork's Python package and Metal-enabled native library; verify
 the imported paths before interpreting a benchmark. Profiling environment
 variables add overhead and should be off for headline timing.
 
+The [experiment CLI](docs/Metal-CLI.en.md) provides
+`python3 tools/metal_experiment.py doctor --json`. Its `build`, `validate`,
+and `benchmark` commands support `--json-out`; `report` and `serve` render
+selected aggregate JSON in a local dashboard. A `PASS` command state does
+not establish application model quality.
+
 Do not push to the `upstream` remote, which points at official LightGBM.
 Push only to the owner's `origin` remote after reviewing the target and
 commit identity. Public source benchmarks

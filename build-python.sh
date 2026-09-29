@@ -44,6 +44,8 @@
 #                                   Compile integrated OpenCL version.
 #     --mingw
 #                                   Compile with MinGW.
+#     --metal
+#                                   Compile the experimental Apple Silicon Metal backend.
 #     --mpi
 #                                   Compile MPI version.
 #     --no-isolation
@@ -65,6 +67,7 @@
 set -e -u
 
 echo "[INFO] building lightgbm"
+PYTHON_EXEC="${PYTHON_BIN:-python}"
 
 # Default values of arguments
 INSTALL="false"
@@ -158,6 +161,11 @@ while [ $# -gt 0 ]; do
         BUILD_ARGS="${BUILD_ARGS} --config-setting=cmake.define.CMAKE_SH=CMAKE_SH-NOTFOUND"
         BUILD_ARGS="${BUILD_ARGS} --config-setting=cmake.args=-G'MinGW Makefiles'"
         ;;
+    --metal)
+        BUILD_ARGS="${BUILD_ARGS} --config-setting=cmake.define.USE_METAL=ON"
+        BUILD_ARGS="${BUILD_ARGS} --config-setting=cmake.define.USE_HOMEBREW_FALLBACK=ON"
+        BUILD_ARGS="${BUILD_ARGS} --config-setting=cmake.define.BUILD_CLI=OFF"
+        ;;
     --mpi)
         BUILD_ARGS="${BUILD_ARGS} --config-setting=cmake.define.USE_MPI=ON"
         ;;
@@ -190,7 +198,7 @@ if [ -n "${CUDAARCHS:-}" ]; then
     BUILD_ARGS="${BUILD_ARGS} --config-setting=cmake.define.CMAKE_CUDA_ARCHITECTURES=${CUDAARCHS}"
 fi
 
-if ! python -m build --version >/dev/null; then
+if ! "${PYTHON_EXEC}" -m build --version >/dev/null; then
     echo "'build' is required to build 'lightgbm'. Install it with 'pip install build' or similar."
     exit 1
 fi
@@ -404,7 +412,7 @@ if test "${BUILD_SDIST}" = true; then
     # note that empty echo string leads to that xargs doesn't run the command
     # in some implementations of xargs
     # ref: https://stackoverflow.com/a/8296746
-    echo "--sdist --outdir ../dist ${BUILD_ARGS} ." | xargs python -m build
+    echo "--sdist --outdir ../dist ${BUILD_ARGS} ." | xargs "${PYTHON_EXEC}" -m build
 fi
 
 if test "${BUILD_WHEEL}" = true; then
@@ -414,7 +422,7 @@ if test "${BUILD_WHEEL}" = true; then
     # note that empty echo string leads to that xargs doesn't run the command
     # in some implementations of xargs
     # ref: https://stackoverflow.com/a/8296746
-    echo "--wheel --outdir ../dist ${BUILD_ARGS} ." | xargs python -m build
+    echo "--wheel --outdir ../dist ${BUILD_ARGS} ." | xargs "${PYTHON_EXEC}" -m build
 fi
 
 if test "${INSTALL}" = true; then
@@ -426,7 +434,7 @@ if test "${INSTALL}" = true; then
         PACKAGE_FILE="$(echo dist/lightgbm*.tar.gz)"
     fi
     # shellcheck disable=SC2086
-    python -m pip install \
+    "${PYTHON_EXEC}" -m pip install \
         ${PIP_INSTALL_ARGS} \
         --force-reinstall \
         --no-cache-dir \
