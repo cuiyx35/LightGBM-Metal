@@ -20,6 +20,8 @@ permissions:
 
 jobs:
   r-configure:
+    # This job pushes directly to upstream, so never run it in a fork.
+    if: github.repository == 'lightgbm-org/LightGBM'
     name: r-configure
     timeout-minutes: 60
     runs-on: ubuntu-latest
