@@ -485,8 +485,8 @@ jobs:
       - test
       - test-linux-aarch64
     runs-on: ubuntu-latest
-    # publish whenever a new commit is pushed to 'main'
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # This destination belongs to upstream; forks keep builds/tests without publishing.
+    if: github.repository == 'lightgbm-org/LightGBM' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: nightly-python-uploads
       url: https://anaconda.org/lightgbm-packages/lightgbm
