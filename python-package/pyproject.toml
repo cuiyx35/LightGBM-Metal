@@ -191,6 +191,10 @@ select = [
 raises-extend-require-match-for = ["*Exception", "*Error"]
 
 [tool.ruff.lint.per-file-ignores]
+"tools/metal_experiment.py" = [
+    # CLI output and streamed child-process output are part of the user interface.
+    "T201"
+]
 ".ci/create-nuget.py" = [
     # (flake8-print) flake8-print
     "T201"

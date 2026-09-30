@@ -297,7 +297,14 @@ matplotlib.use\(\"Agg\"\)\
             'ipywidgets>=8.1.2' \
             'notebook>=7.1.2'
     fi
-    for f in *.py **/*.py; do python "${f}" || exit 1; done  # run all examples
+    # Metal-only examples are exercised with the checkout's Metal library in
+    # metal_macos.yml; these jobs exercise the installed CPU package instead.
+    for f in *.py **/*.py; do
+        if grep -Fxq "${f}" "$BUILD_DIRECTORY/.ci/metal-examples.txt"; then
+            continue
+        fi
+        python "${f}" || exit 1
+    done
     cd "$BUILD_DIRECTORY/examples/python-guide/notebooks"
     sed -i'.bak' 's/INTERACTIVE = False/assert False, \\"Interactive mode disabled\\"/' interactive_plot_example.ipynb
     jupyter nbconvert --ExecutePreprocessor.timeout=180 --to notebook --execute --inplace ./*.ipynb || exit 1  # run all notebooks

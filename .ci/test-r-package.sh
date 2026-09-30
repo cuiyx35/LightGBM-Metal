@@ -75,6 +75,12 @@ fi
 if [[ $OS_NAME == "macos" ]]; then
     brew update-reset --auto-update
     brew update --auto-update
+    # Hosted images can retain a force-linked OpenSSL 1.1. Remove only its
+    # prefix symlinks so qpdf's OpenSSL 3 dependency can link without overwriting
+    # files. The old keg remains available to already-installed software.
+    if brew list --versions openssl@1.1 >/dev/null 2>&1; then
+        brew unlink openssl@1.1
+    fi
     if [[ $R_BUILD_TYPE == "cran" ]]; then
         brew install automake || exit 1
     fi

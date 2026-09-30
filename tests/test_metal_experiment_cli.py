@@ -7,20 +7,17 @@ from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / "tools" / "metal_experiment.py"
 SPEC = importlib.util.spec_from_file_location("metal_experiment", SCRIPT)
-assert SPEC and SPEC.loader
+assert SPEC
+assert SPEC.loader
 metal_experiment = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(metal_experiment)
 
 
 def test_dashboard_renders_real_benchmark_and_validation():
     root = SCRIPT.parents[1]
-    benchmark = json.loads(
-        (root / "benchmarks/metal/m5_current_3m_100trees_cpu_metal.json").read_text()
-    )
+    benchmark = json.loads((root / "benchmarks/metal/m5_current_3m_100trees_cpu_metal.json").read_text())
     validation = json.loads((root / "benchmarks/metal/m5_validation.json").read_text())
-    page = metal_experiment.dashboard(
-        benchmark, validation, None, {"status": "PASS"}, [], False
-    )
+    page = metal_experiment.dashboard(benchmark, validation, None, {"status": "PASS"}, [], False)
     assert "CPU / Metal 基准" in page
     assert "1.67×" in page
     assert "默认协同路径验证" in page
@@ -44,9 +41,7 @@ def test_dashboard_escapes_untrusted_json():
 
 
 def test_dashboard_handles_incomplete_benchmark_shape():
-    page = metal_experiment.dashboard(
-        {"median": {"cpu": "unexpected"}}, None, None, None, [], False
-    )
+    page = metal_experiment.dashboard({"median": {"cpu": "unexpected"}}, None, None, None, [], False)
     assert "CPU / Metal 基准" in page
     assert "—" in page
 

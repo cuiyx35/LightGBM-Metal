@@ -47,6 +47,23 @@ jobs:
         env:
           PYTHON_BIN: ${{ runner.temp }}/metal-venv/bin/python
         run: bash tools/build-metal-macos.sh --validate --jobs 2
+      - name: Exercise Metal benchmark smoke workloads
+        env:
+          PYTHONPATH: ${{ github.workspace }}/python-package
+          PYTHON_BIN: ${{ runner.temp }}/metal-venv/bin/python
+        run: |
+          # Validation scripts in the inventory run in the preceding step.
+          # Execute every benchmark here with the checkout's native Metal library.
+          while IFS= read -r example; do
+            case "$example" in
+              *_benchmark.py)
+                "$PYTHON_BIN" "examples/python-guide/$example" \
+                  --output "$RUNNER_TEMP/${example%.py}.json"
+                ;;
+              metal_validate.py|metal_resident_validate.py) ;;
+              *) echo "Unknown Metal example: $example" >&2; exit 1 ;;
+            esac
+          done < .ci/metal-examples.txt
       - name: Check experiment CLI and render report
         run: |
           "$RUNNER_TEMP/metal-venv/bin/python" tools/metal_experiment.py doctor --json
@@ -63,7 +80,8 @@ jobs:
         run: |
           python3 -m venv "$RUNNER_TEMP/metal-wheel-venv"
           "$RUNNER_TEMP/metal-wheel-venv/bin/python" -m pip install --disable-pip-version-check numpy scipy narwhals
-          "$RUNNER_TEMP/metal-wheel-venv/bin/python" -m pip install --disable-pip-version-check --no-deps dist/lightgbm-*.whl
+          "$RUNNER_TEMP/metal-wheel-venv/bin/python" -m pip install \
+            --disable-pip-version-check --no-deps dist/lightgbm-*.whl
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/metal-wheel-venv/bin/python" - <<'PY'
           import numpy as np
