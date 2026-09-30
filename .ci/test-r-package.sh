@@ -81,6 +81,18 @@ if [[ $OS_NAME == "macos" ]]; then
     if brew list --versions openssl@1.1 >/dev/null 2>&1; then
         brew unlink openssl@1.1
     fi
+    # Some hosted images add this symlink outside Homebrew's link bookkeeping,
+    # so `brew unlink` reports zero links. Remove only that exact legacy target;
+    # never overwrite a regular file or a link to another OpenSSL version.
+    brew_prefix=$(brew --prefix)
+    openssl_bin="${brew_prefix}/bin/openssl"
+    if [[ -L "${openssl_bin}" ]]; then
+        openssl_target=$(readlink "${openssl_bin}")
+        if [[ "${openssl_target}" == "${brew_prefix}/opt/openssl@1.1/bin/openssl" \
+            || "${openssl_target}" == "../opt/openssl@1.1/bin/openssl" ]]; then
+            rm "${openssl_bin}"
+        fi
+    fi
     if [[ $R_BUILD_TYPE == "cran" ]]; then
         brew install automake || exit 1
     fi
