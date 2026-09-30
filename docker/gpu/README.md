@@ -35,10 +35,8 @@ Requires docker and [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) on 
 ### Build Docker Image
 
 ```sh
-mkdir lightgbm-docker
-cd lightgbm-docker
-wget https://raw.githubusercontent.com/lightgbm-org/LightGBM/main/docker/gpu/dockerfile.gpu
-docker build -f dockerfile.gpu -t lightgbm-gpu .
+# From the root of this repository, use the Dockerfile checked out with these docs.
+docker build -f docker/gpu/dockerfile.gpu -t lightgbm-gpu .
 ```
 
 ### Run Image
