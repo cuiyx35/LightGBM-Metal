@@ -174,14 +174,22 @@ docker run \
 To use [RStudio](https://www.rstudio.com/products/rstudio/), an interactive development environment, run the following.
 
 ```shell
+read -r -s -p 'Choose a unique RStudio password: ' PASSWORD
+printf '\n'
+test -n "${PASSWORD}" || { echo 'A non-empty password is required'; exit 1; }
+export PASSWORD
 docker run \
     --rm \
-    --env PASSWORD="lightgbm" \
-    -p 8787:8787 \
+    --env PASSWORD \
+    -p 127.0.0.1:8787:8787 \
     lightgbm-r
+unset PASSWORD
 ```
 
-Then navigate to `localhost:8787` in your local web browser, and log in with username `rstudio` and password `lightgbm`.
+Run these commands in Bash. Then navigate to `localhost:8787` in your local web
+browser, and log in with username `rstudio` and the unique password you entered.
+The port is published only on the host's loopback interface. Do not reuse a
+password from another account or publish this port on all host interfaces.
 
 To target a different R version, pass any [valid rocker/verse tag](https://hub.docker.com/r/rocker/verse/tags) to `docker build`.
 

@@ -58,11 +58,6 @@ jobs:
             task: cpp-tests
             compiler: msvc
             container: null
-          - os: ubuntu-24.04-ppc64le
-            task: cpp-tests
-            compiler: gcc
-            container: null
-            os-display-name: 'ubuntu24.04-ppc64le'
           ###########
           # if-else #
           ###########
@@ -132,7 +127,7 @@ jobs:
           export TASK="${{ matrix.task }}"
           if [[ "${{ matrix.os }}" =~ ^macos ]]; then
               export OS_NAME="macos"
-          elif [[ "${{ matrix.os }}" == "ubuntu-latest" || "${{ matrix.os }}" == "ubuntu-24.04-ppc64le" ]]; then
+          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
               export OS_NAME="linux"
           fi
           if [[ "${{ matrix.container }}" == "ubuntu:22.04" ]]; then
@@ -148,11 +143,48 @@ jobs:
           $env:BUILD_SOURCESDIRECTORY = $env:BUILD_DIRECTORY
           $env:TASK = "${{ matrix.task }}"
           & "$env:GITHUB_WORKSPACE/.ci/test-windows.ps1"
+  powerpc:
+    name: cpp-tests (ubuntu24.04-ppc64le, gcc, QEMU)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Set up PowerPC user-mode emulation
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a  # v4.0.0
+        with:
+          platforms: ppc64le
+          cache-image: false
+          image: tonistiigi/binfmt:qemu-v9.2.2@sha256:1b804311fe87047a4c96d38b4b3ef6f62fca8cd125265917a9e3dc3c996c39e6
+      - name: Build and run the complete PowerPC C++ test suite
+        run: |
+          # No native PowerPC hosted runner exists. Compile and execute the same
+          # Debug/OpenMP test target under QEMU, without filtering any tests.
+          docker run --rm --platform linux/ppc64le \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/source,readonly" \
+            ubuntu:noble-20260911@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3 \
+            bash -euo pipefail -c '
+              test "$(uname -m)" = ppc64le
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install --no-install-recommends -y build-essential cmake ca-certificates git
+              cp -a /source /work
+              cd /work
+              cmake -B build -S . -DBUILD_CPP_TEST=ON -DUSE_DEBUG=ON
+              cmake --build build --target testlightgbm -j2
+              ./testlightgbm
+            '
   all-cpp-jobs-successful:
     if: always()
     runs-on: ubuntu-latest
     needs:
       - test
+      - powerpc
     permissions:
       statuses: read
     steps:

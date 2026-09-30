@@ -172,16 +172,24 @@ if (($env:TASK -eq "regular") -or (($env:APPVEYOR -eq "true") -and ($env:TASK -e
     if ($env:PYTHON_VERSION -ne "3.10") {
         conda install -y -n $env:CONDA_ENV "h5py>=3.10" "ipywidgets>=8.1.2" "notebook>=7.1.2"
     }
-    # Run all examples
+    # Run ordinary examples against the installed CPU package. The explicit
+    # Metal inventory is exercised by metal_macos.yml on Apple Silicon.
+    $metalExamples = Get-Content "$env:BUILD_SOURCESDIRECTORY/.ci/metal-examples.txt"
+    $exampleRunner = @"
+import runpy, sys, warnings
+warnings.showwarning = (
+    lambda message, category, filename, lineno, file=None, line=None:
+    sys.stdout.write(warnings.formatwarning(message, category, filename, lineno, line))
+)
+sys.argv = [sys.argv[1]]
+runpy.run_path(sys.argv[0], run_name="__main__")
+"@
     foreach ($file in @(Get-ChildItem *.py)) {
-        @(
-            "import sys, warnings",
-            -join @(
-                "warnings.showwarning = lambda message, category, filename, lineno, file=None, line=None: ",
-                "sys.stdout.write(warnings.formatwarning(message, category, filename, lineno, line))"
-            )
-        ) + (Get-Content $file) | Set-Content $file
-        python $file ; Assert-Output $?
+        if ($metalExamples -contains $file.Name) {
+            continue
+        }
+        # Configure warning output outside the source, preserving future imports.
+        python -c $exampleRunner $file.FullName ; Assert-Output $?
     }
     # Run all notebooks
     Set-Location "$env:BUILD_SOURCESDIRECTORY/examples/python-guide/notebooks"

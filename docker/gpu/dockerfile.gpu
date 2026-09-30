@@ -105,18 +105,19 @@ RUN apt-get autoremove -y && apt-get clean && \
 #           JUPYTER
 #################################################################################################################
 
-# password: keras
-# password key: --NotebookApp.password='sha1:98b767162d34:8da1bc3c75a0f29145769edc977375a373407824'
+# Keep Jupyter's default randomly generated authentication token and run it
+# without root privileges. Do not bake credentials into the image.
+RUN groupadd --gid 1000 lightgbm && \
+    useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash lightgbm && \
+    mkdir -p /home/lightgbm/notebooks && \
+    chown -R lightgbm:lightgbm /home/lightgbm
 
-# Add a notebook profile.
-RUN mkdir -p -m 700 ~/.jupyter/ && \
-    echo "c.NotebookApp.ip = '*'" >> ~/.jupyter/jupyter_notebook_config.py
-
-VOLUME /home
-WORKDIR /home
+USER lightgbm
+ENV HOME=/home/lightgbm
+WORKDIR /home/lightgbm/notebooks
 
 # IPython
 EXPOSE 8888
 
 ENTRYPOINT [ "/tini", "--" ]
-CMD /bin/bash -c "source activate py3 && jupyter notebook --allow-root --no-browser --NotebookApp.password='sha1:98b767162d34:8da1bc3c75a0f29145769edc977375a373407824' && source deactivate"
+CMD ["/bin/bash", "-c", "source activate py3 && exec jupyter notebook --ip=0.0.0.0 --no-browser"]
