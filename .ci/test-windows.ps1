@@ -177,7 +177,10 @@ if (($env:TASK -eq "regular") -or (($env:APPVEYOR -eq "true") -and ($env:TASK -e
     $metalExamples = Get-Content "$env:BUILD_SOURCESDIRECTORY/.ci/metal-examples.txt"
     $exampleRunner = @"
 import runpy, sys, warnings
-warnings.showwarning = lambda message, category, filename, lineno, file=None, line=None: sys.stdout.write(warnings.formatwarning(message, category, filename, lineno, line))
+warnings.showwarning = (
+    lambda message, category, filename, lineno, file=None, line=None:
+    sys.stdout.write(warnings.formatwarning(message, category, filename, lineno, line))
+)
 sys.argv = [sys.argv[1]]
 runpy.run_path(sys.argv[0], run_name="__main__")
 "@
