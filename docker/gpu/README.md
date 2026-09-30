@@ -22,7 +22,9 @@ LightGBM can be utilized in GPU and CPU modes and via Python.
 
 Running the container starts a Jupyter Notebook at `localhost:8888`.
 
-Jupyter password: `keras`.
+Jupyter generates a random authentication token on startup. Retrieve the local
+login URL from `docker logs lightgbm-gpu`; treat that URL as a credential and do not
+share it. The notebook runs as an unprivileged user.
 
 ## Requirements
 
@@ -42,8 +44,14 @@ docker build -f dockerfile.gpu -t lightgbm-gpu .
 ### Run Image
 
 ```sh
-nvidia-docker run --rm -d --name lightgbm-gpu -p 8888:8888 -v /home:/home lightgbm-gpu
+nvidia-docker run --rm -d --name lightgbm-gpu -p 127.0.0.1:8888:8888 lightgbm-gpu
 ```
+
+The port is published only on the host's loopback interface. No host directories
+are mounted, and notebooks are removed with the container. To persist notebooks,
+add `-v lightgbm-notebooks:/home/lightgbm/notebooks` for a dedicated Docker volume.
+To import local data, mount only the needed directory read-only, for example
+`-v "${PWD}/data:/home/lightgbm/data:ro"`. Avoid mounting the host's home directory.
 
 ### Attach with Command Line Access (if required)
 
@@ -53,6 +61,6 @@ docker exec -it lightgbm-gpu bash
 
 ### Jupyter Notebook
 
-```sh
-localhost:8888
-```
+Open the token-bearing URL from the container logs at `http://localhost:8888`.
+Keep authentication enabled; remote access should use an authenticated tunnel
+instead of publishing the notebook port on all host interfaces.
